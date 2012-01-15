@@ -1,97 +1,34 @@
 package com.spacepocalypse.beermap2.service;
 
-import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.log4j.Logger;
 
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 
 public class BeerService implements IBeerService {
-	private List<MappedBeer> beerList;
+	private BeerDbAccess dbAccess;
 	
-	public BeerService() {
-		beerList = new ArrayList<MappedBeer>();
-		beerList.add(new MappedBeer() {
-			@Override
-			public int getId() {
-				return 1;
-			}
-			
-			@Override
-			public String getName() {
-				return "TestBeer1";
-			}
-
-			@Override
-			public float getAbv() {
-				return 7.2f;
-			}
-			
-			@Override
-			public String getDescript() {
-				return "This is a test beer description.";
-			}
-			
-		});
-		
-		beerList.add(new MappedBeer() {
-			@Override
-			public int getId() {
-				return 2;
-			}
-			
-			@Override
-			public String getName() {
-				return "TestBeer2";
-			}
-
-			@Override
-			public float getAbv() {
-				return 10.5f;
-			}
-			
-			@Override
-			public String getDescript() {
-				return "This is a test beer (2) description.";
-			}
-			
-		});
-		
-		beerList.add(new MappedBeer() {
-			@Override
-			public int getId() {
-				return 3;
-			}
-			
-			@Override
-			public String getName() {
-				return "TestBeer3";
-			}
-
-			@Override
-			public float getAbv() {
-				return 4.4f;
-			}
-			
-			@Override
-			public String getDescript() {
-				return "This is a test beer (3) description.";
-			}
-			
-		});
-		
+	public BeerService(BeerDbAccess dbAccess) {
+		this.dbAccess = dbAccess;
 	}
 	
 	public List<MappedBeer> query(String beerName) {
-		List<MappedBeer> beers = new ArrayList<MappedBeer>();
-		for (final MappedBeer ea : beerList) {
-			if (StringUtils.containsIgnoreCase(ea.getName(), beerName)) {
-				beers.add(ea);
-			}
+		Map<String, String[]> params = new HashMap<String, String[]>();
+		params.put(BeerSearchEngine.QUERY_KEY_NAME, new String[]{beerName});
+		List<MappedBeer> results = Collections.emptyList();
+		
+		try {
+			results = dbAccess.findAllBeers(params);
+			
+		} catch (Exception e) {
+			Logger.getLogger(getClass()).error("Error while accessing dao for findallbeers", e);
 		}
 		
-		return beers;
+		return results;
 	}
 
 }

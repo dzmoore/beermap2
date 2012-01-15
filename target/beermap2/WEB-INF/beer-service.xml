@@ -3,6 +3,14 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
 
-	<bean id="beerService" class="com.spacepocalypse.beermap2.service.BeerService" />
+	<bean id="beerService" class="com.spacepocalypse.beermap2.service.BeerService" >
+		<constructor-arg>
+			<bean class="com.spacepocalypse.beermap2.service.BeerDbAccess">
+				<constructor-arg name="username" value="root" />
+				<constructor-arg name="password" value="3324newpasswordmysql" />			
+			</bean>
+		</constructor-arg>
+	</bean>
 
 </beans>
+	
