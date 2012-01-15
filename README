@@ -1,0 +1,13 @@
+B E E R M A P 2
+
+The vision of BeerMap is to create a piece of software 
+that is capable of accessing and manipulating a database
+of beers.  Currently, this database is populated by
+the dataset provided by Open Beer Database
+(http://openbeerdb.com/). BeerMap consists of the 
+server and database backend, a web front-end, and
+an android application front-end.  Currently, the
+android application is not under source control,
+but it will be added to github in the future. 
+ 
+
