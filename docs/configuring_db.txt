@@ -20,3 +20,9 @@ The beerdb database should now be imported.  Please note
 that this works on *nix OS's (and cygwin), but a different
 process may need to occur on a windows installation without
 cygwin.
+
+Also note that the database usernames and passwords are 
+currently required in some *-service.xml files (they 
+should really only be in one; add a TODO).  The usernames
+and passwords in these files need to be changed to reflect
+the username/password configured for your local database.
