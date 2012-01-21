@@ -7,7 +7,16 @@ the dataset provided by Open Beer Database
 (http://openbeerdb.com/). BeerMap consists of the 
 server and database backend, a web front-end, and
 an android application front-end.  Currently, the
-android application is not under source control,
-but it will be added to github in the future. 
+android application is located here: 
+https://github.com/youcaughtafish/bm4a .
+
+This application is the second iteration of BeerMap,
+with this iteration created using Maven 
+(http://maven.apache.org/) and Spring MVC/web
+(http://www.springsource.org/).
+
+This application has been developed using Tomcat
+7 (http://tomcat.apache.org/) and a MySQL database
+(http://www.mysql.com/).
  
 

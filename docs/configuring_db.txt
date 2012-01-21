@@ -1,0 +1,22 @@
+BeerMap2 uses a MySQL (http://www.mysql.com/) database.  Assuming 
+an instance of MySQL is installed and setup on the current machine, 
+loading the BeerMap dataset is fairly straight forward.  Log into the
+mysql application:
+
+mysql -u root -p
+
+and enter the root password.
+
+Create a new database (the code baseline uses 'beerdb'):
+
+create database beerdb;
+
+Exit the mysql application.  Take the sql dump from this
+baseline, and import it into mysql:
+
+mysql -u root -p beerdb < beerdb.sql
+
+The beerdb database should now be imported.  Please note 
+that this works on *nix OS's (and cygwin), but a different
+process may need to occur on a windows installation without
+cygwin.

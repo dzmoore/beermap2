@@ -2,10 +2,7 @@ package com.spacepocalypse.beermap2.service;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -29,7 +26,7 @@ public class DbExecutor {
 
 	public Connection getDbConnection() {
 		if (dbConnection == null) {
-			// This will load the MySQL driver, each DB has its own driver
+			// load the MySQL driver
 			try {
 				Class.forName("com.mysql.jdbc.Driver");
 			} catch (ClassNotFoundException e) {
@@ -40,7 +37,7 @@ public class DbExecutor {
 			// Setup the connection with the DB
 			try {
 				dbConnection = DriverManager.getConnection(
-						Conca.t("jdbc:mysql://localhost/beerdb?user=", username, "&password=", password)
+					Conca.t("jdbc:mysql://localhost/beerdb?user=", username, "&password=", password, "&autoReconnect=true")
 				);
 			} catch (SQLException e) {
 				log4jLogger.error(e.getMessage());

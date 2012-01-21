@@ -9,6 +9,7 @@
 	<configs>
 		<config>src/main/webapp/WEB-INF/beermap2-web-servlet.xml</config>
 		<config>src/main/webapp/WEB-INF/beer-service.xml</config>
+		<config>src/main/webapp/WEB-INF/beermap2-android-servlet.xml</config>
 	</configs>
 	<configSets>
 	</configSets>

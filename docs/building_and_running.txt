@@ -1,0 +1,12 @@
+This project is built using Maven.  The project can be built and 
+packaged into a war file by executing the following command
+from the root of the project directory:
+
+mvn clean package
+
+This will create a war file within the 'target' directory.
+This war file can then be deployed into a servlet container
+(this app was developed using Apache Tomcat).  For tomcat,
+deploying is as easy as copying the war file into 
+$CATALINA_HOME/webapps.
+

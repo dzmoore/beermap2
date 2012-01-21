@@ -16,7 +16,7 @@
 		<input type="submit" value="Search" />
 	</form>
 
-	<table>
+	<table border="1">
 		<tr>
 			<th>Beer Name</th>
 			<th>Abv</th>
