@@ -22,4 +22,24 @@ public class StrUtl {
         }
         return str.regionMatches(false, 0, prefix, 0, prefix.length());
 	}
+	
+	public static String trunc(String str, int maxLen) {
+		if (str == null) {
+			return null;
+		}
+		
+		if (maxLen <= 3 && str.length() > maxLen) {
+			return str.substring(0, maxLen);
+		}
+		
+		if (maxLen <= 3) {
+			return str;
+		}
+		
+		if (str.length() > maxLen - 3) {
+			return Conca.t(str.substring(0, maxLen-3), "...");
+		}
+		
+		return str;
+	}
 }

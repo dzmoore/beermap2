@@ -7,7 +7,7 @@
 		<constructor-arg>
 			<bean class="com.spacepocalypse.beermap2.service.BeerDbAccess">
 				<constructor-arg name="username" value="root" />
-				<constructor-arg name="password" value="put_the_sql_password_here" />
+				<constructor-arg name="password" value="pw_here" />
 			</bean>
 		</constructor-arg>
 	</bean>

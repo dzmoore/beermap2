@@ -17,6 +17,7 @@ import com.spacepocalypse.beermap2.domain.MappedBeerRating;
 import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.beermap2.domain.MappedValue;
 import com.spacepocalypse.util.Conca;
+import com.spacepocalypse.util.StrUtl;
 
 public class BeerDbAccess extends DbExecutor {
 	private static final int DB_EXECUTE_RETRY_ATTEMPTS = 5;
@@ -51,7 +52,7 @@ public class BeerDbAccess extends DbExecutor {
 	
 	private static final String UPDATE_WHERE_ID = 
 		"update beers " +
-		"set name=?, abv=?, descript=?" +
+		"set name=?, abv=?, descript=? " +
 		"where id=?";
 	
 	private static final String UPDATE_RATING = 
@@ -133,7 +134,7 @@ public class BeerDbAccess extends DbExecutor {
 			return result > 0;
 			
 		} catch (SQLException e) {
-			log4jLogger.error(e.getMessage());
+			log4jLogger.error(Conca.t("Error occurred while attempting to update beer [", beer, "]"), e);
 		} 
 		return false;
 	}
@@ -250,7 +251,7 @@ public class BeerDbAccess extends DbExecutor {
 		}
 	}
 	
-	public List<MappedBeerRating> findAllBeerRatings(Map<String, String[]> parameters) {
+	public List<MappedBeerRating> findAllBeerRatings(Map<String, String> parameters) {
 //		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_NAME)) {	
 //			queryBuilder.append("lower(name) like ? ");
 //			queryKeyOrder.put(BeerSearchEngine.QUERY_KEY_NAME, keyOrderIndex++);
@@ -269,43 +270,45 @@ public class BeerDbAccess extends DbExecutor {
 		StringBuilder query = new StringBuilder(FIND_ALL_RATINGS_FOR_BEER);
 		List<MappedBeerRating> ratings = new ArrayList<MappedBeerRating>();
 		
-		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_BEER_ID)) {
+		if (parameters.containsKey(Constants.QUERY_KEY_BEER_ID)) {
 			query.append("b.id = ? ");
 			
-			String[] beerIdStrings = parameters.get(BeerSearchEngine.QUERY_KEY_BEER_ID);
-			if (beerIdStrings == null || beerIdStrings.length <= 0) {
-				log4jLogger.error("BeerId parameter list is empty. Parameters: [" + parameters.toString() + "]");
+			String beerIdString = parameters.get(Constants.QUERY_KEY_BEER_ID);
+			
+			if (beerIdString == null) {
+				log4jLogger.error(Conca.t("BeerId parameter is null. Parameters: [", parameters.toString(), "]"));
 				return ratings;
 			}
-			
-			String beerIdString = beerIdStrings[0];
 			
 			try {
 				params.add(Integer.parseInt(beerIdString));
+				
 			} catch (NumberFormatException e) {
-				log4jLogger.error("Error parsing beerId. Parameters: [" + parameters.toString() + "]", e);
+				log4jLogger.error(Conca.t("Error parsing beerId. Parameters: [", parameters.toString(), "]"), e);
 				return ratings;
 			}
+			
 			paramTypes.add(Integer.class);
 		}
 		
-		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_USER_ID)) {
+		if (parameters.containsKey(Constants.QUERY_KEY_USER_ID)) {
 			if (params.size() >= 1) {
 				query.append(" and ");
 			}
 			
 			query.append("u.id = ? ");
-			String[] userIdStrings = parameters.get(BeerSearchEngine.QUERY_KEY_USER_ID);
-			if (userIdStrings == null || userIdStrings.length <= 0) {
-				log4jLogger.error("UserId parameter list is empty. Parameters: [" + parameters.toString() + "]");
+			String userIdString = parameters.get(Constants.QUERY_KEY_USER_ID);
+			
+			if (userIdString == null) {
+				log4jLogger.error(Conca.t("UserId parameter is null. Parameters: [", parameters.toString(), "]"));
 				return ratings;
 			}
 			
-			String userIdString = userIdStrings[0];
 			try {
 				params.add(Integer.parseInt(userIdString));
+				
 			} catch (NumberFormatException e) {
-				log4jLogger.error("Error parsing userId. Parameters: [" + parameters.toString() + "]", e);
+				log4jLogger.error(Conca.t("Error parsing userId. Parameters: [", parameters.toString(), "]"), e);
 				return ratings;
 			}
 			paramTypes.add(Integer.class);
@@ -317,10 +320,11 @@ public class BeerDbAccess extends DbExecutor {
 			while (results != null && results.next()) {
 				ratings.add(MappedBeerRating.createMappedBeerRating(results));
 			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-			log4jLogger.error(e.getMessage());
+			
+		} catch (Exception e) {
+			log4jLogger.error("Error occurred while attempting to create beer rating list from db.", e);
 		}
+		
 		return ratings;
 	}
 	
@@ -466,25 +470,25 @@ public class BeerDbAccess extends DbExecutor {
 		int keyOrderIndex = 1;
 		StringBuilder queryBuilder = new StringBuilder(SELECT_ALL_WHERE);
 		
-		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_NAME)) {	
+		if (parameters.containsKey(Constants.QUERY_KEY_NAME)) {	
 			queryBuilder.append("lower(name) like ? ");
-			queryKeyOrder.put(BeerSearchEngine.QUERY_KEY_NAME, keyOrderIndex++);
+			queryKeyOrder.put(Constants.QUERY_KEY_NAME, keyOrderIndex++);
 		} 
 		
-		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_ABV)) {
+		if (parameters.containsKey(Constants.QUERY_KEY_ABV)) {
 			if (keyOrderIndex > 1) {
 				queryBuilder.append("and ");
 			}
 			queryBuilder.append("abv like ? ");
-			queryKeyOrder.put(BeerSearchEngine.QUERY_KEY_ABV, keyOrderIndex++);
+			queryKeyOrder.put(Constants.QUERY_KEY_ABV, keyOrderIndex++);
 		} 
 		
-		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_UPC)) {
+		if (parameters.containsKey(Constants.QUERY_KEY_UPC)) {
 			if (keyOrderIndex > 1) {
 				queryBuilder.append("and ");
 			}
 			queryBuilder.append("upc.upca like ? ");
-			queryKeyOrder.put(BeerSearchEngine.QUERY_KEY_UPC, keyOrderIndex++);
+			queryKeyOrder.put(Constants.QUERY_KEY_UPC, keyOrderIndex++);
 		}
 		
 		if (keyOrderIndex <= 1) {
@@ -499,7 +503,7 @@ public class BeerDbAccess extends DbExecutor {
 		}
 		
 		if (log4jLogger.isTraceEnabled()) {
-			log4jLogger.trace("Results=[" + results.toString() + "]");
+			log4jLogger.trace(StrUtl.trunc(Conca.t("Results=[", results.toString(), "]"), 500));
 		}
 		
 		return results;
@@ -513,21 +517,29 @@ public class BeerDbAccess extends DbExecutor {
 		ResultSet results = null;
 		int retryAttempts = DB_EXECUTE_RETRY_ATTEMPTS;
 		while (retryAttempts-- > 0) {
+			
 			if (log4jLogger.isDebugEnabled()) {
-				log4jLogger.debug("executeInsert: Query=[" + query + "]");
+				log4jLogger.debug(Conca.t("executeInsert: Query=[", query, "]"));
 			}
 			
 			PreparedStatement ps = null;
 			
 			try {
 				ps = getDbConnection().prepareStatement(query);
+				
 			} catch (Exception e) {
-				log4jLogger.error("execute(String query, List<Object> params, List<Class<?>> paramTypes): " + e.getMessage());
+				// attempt to handle "broken pipe" and the like errors
+				
+				log4jLogger.error(Conca.t(
+						"execute(String query, List<Object> params, List<Class<?>> paramTypes) errored: [", e.getMessage(), "]"), 
+						e
+				);
+				
 				if (e instanceof SQLException) {
 					break;
 				}
 
-				if (e.getMessage().toLowerCase().contains("broken pipe")) {
+				if (StringUtils.containsIgnoreCase(e.getMessage(), "broken pipe")) {
 					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
 					closeAndReconnect();
 					continue;
@@ -546,8 +558,12 @@ public class BeerDbAccess extends DbExecutor {
 				try {
 					int parameterIndex = i+1;
 					setParamByType(ps, ea, eaType, parameterIndex);
-				} catch (SQLException e) {
-					log4jLogger.error("execute(String query, List<Object> params, List<Class<?>> paramTypes): " + e.getMessage());
+					
+				} catch (Exception e) {
+					log4jLogger.error(
+							Conca.t("execute(String query, List<Object> params, List<Class<?>> paramTypes): [", e.getMessage(), "]"), 
+							e
+					);
 					return null;
 				}
 			}
@@ -556,10 +572,14 @@ public class BeerDbAccess extends DbExecutor {
 				ps.execute();
 				results = ps.getResultSet();
 				break;
+				
 			} catch (Exception e) {
-				log4jLogger.error("execute(String query, List<Object> params, List<Class<?>> paramTypes): " + e.getMessage());
+				log4jLogger.error(
+						Conca.t("execute(String query, List<Object> params, List<Class<?>> paramTypes): [", e.getMessage(), "]"), 
+						e
+				);
 
-				if (e.getMessage().toLowerCase().contains("broken pipe")) {
+				if (StringUtils.containsIgnoreCase(e.getMessage(), "broken pipe")) {
 					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
 					closeAndReconnect();
 				}

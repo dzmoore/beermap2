@@ -16,7 +16,7 @@ public class AndroidService {
 	}
 	
 	public List<MappedBeer> beersByName(String nameQuery) {
-		return beerService.query(nameQuery);
+		return beerService.findAllBeers(nameQuery);
 	}
 	
 }

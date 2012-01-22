@@ -45,7 +45,7 @@ public class BeerController {
 		List<MappedBeer> beers = Collections.emptyList();
 		
 		if (beerName != null) {
-			beers = beerSvc.query(beerName);
+			beers = beerSvc.findAllBeers(beerName);
 		}
 		
 		model.addAttribute("beers", beers);

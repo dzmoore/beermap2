@@ -15,21 +15,21 @@ import com.spacepocalypse.beermap2.domain.MappedValue;
 public class BeerSearchEngine implements IStoppable {
 	private static BeerSearchEngine instance;
 	
-	public static final String QUERY_KEY_NAME = "_name";
-	public static final String QUERY_KEY_ABV = "_abv";
-	public static final String QUERY_KEY_UPC = "_upc";
-	public static final String QUERY_KEY_BEER_ID = "_beerid";
-	public static final String QUERY_KEY_USER_ID = "_userid";
-	private static final String[] VALID_BEER_SEARCH_KEYS = {
-		QUERY_KEY_NAME,
-		QUERY_KEY_ABV,
-		QUERY_KEY_UPC
-	};
-	
-	private static final String[] VALID_RATING_SEARCH_KEYS = {
-		QUERY_KEY_BEER_ID,
-		QUERY_KEY_USER_ID
-	};
+//	public static final String QUERY_KEY_NAME = "_name";
+//	public static final String QUERY_KEY_ABV = "_abv";
+//	public static final String QUERY_KEY_UPC = "_upc";
+//	public static final String QUERY_KEY_BEER_ID = "_beerid";
+//	public static final String QUERY_KEY_USER_ID = "_userid";
+//	private static final String[] VALID_BEER_SEARCH_KEYS = {
+//		QUERY_KEY_NAME,
+//		QUERY_KEY_ABV,
+//		QUERY_KEY_UPC
+//	};
+//	
+//	private static final String[] VALID_RATING_SEARCH_KEYS = {
+//		QUERY_KEY_BEER_ID,
+//		QUERY_KEY_USER_ID
+//	};
 	
 	private Logger log4jLogger;
 	private BeerSearchEngine() {
