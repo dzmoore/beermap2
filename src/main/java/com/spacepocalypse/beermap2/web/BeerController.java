@@ -30,6 +30,11 @@ public class BeerController {
 		this.beerSvc = beerService;
 	}
 	
+	@RequestMapping(value="/")
+	public String index() {
+		return "index";
+	}
+	
 	@RequestMapping(value = "/welcome", method=RequestMethod.GET)
 	public String welcome(Model model) {
 		model.addAttribute("today", new Date());

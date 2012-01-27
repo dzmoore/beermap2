@@ -252,19 +252,6 @@ public class BeerDbAccess extends DbExecutor {
 	}
 	
 	public List<MappedBeerRating> findAllBeerRatings(Map<String, String> parameters) {
-//		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_NAME)) {	
-//			queryBuilder.append("lower(name) like ? ");
-//			queryKeyOrder.put(BeerSearchEngine.QUERY_KEY_NAME, keyOrderIndex++);
-//		} 
-//		
-//		if (parameters.containsKey(BeerSearchEngine.QUERY_KEY_ABV)) {
-//			if (keyOrderIndex > 1) {
-//				queryBuilder.append("and ");
-//			}
-//			queryBuilder.append("abv like ? ");
-//			queryKeyOrder.put(BeerSearchEngine.QUERY_KEY_ABV, keyOrderIndex++);
-//		} 
-		
 		List<Object> params = new ArrayList<Object>();
 		List<Class<?>> paramTypes = new ArrayList<Class<?>>();
 		StringBuilder query = new StringBuilder(FIND_ALL_RATINGS_FOR_BEER);

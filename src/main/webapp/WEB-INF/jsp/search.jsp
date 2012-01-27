@@ -6,17 +6,21 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1" />
+
+<link rel="stylesheet" type="text/css"
+	href="<c:url value="/resources/css/main.css"/>" />
+
 <title>Search</title>
 </head>
 <body>
-	<form method="post">
-		Beer Name 
-		<input type="text" name="beerName" value="${beerName}" /> 
-		<input type="submit" value="Search" />
-	</form>
-
-	<table border="1">
+	<span class="searchbox">
+		<form method="post">
+			Beer Name <input type="text" name="beerName" value="${beerName}" />
+			<input type="submit" value="Search" />
+		</form>
+	</span>
+	<table>
 		<tr>
 			<th>Beer Name</th>
 			<th>Abv</th>
