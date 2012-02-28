@@ -114,7 +114,7 @@ public class AndroidController {
 	
 	@RequestMapping(value = {"/android/ratingsearch/", "/android/ratingsearch"}/*, method=RequestMethod.POST*/)
 	public String getRatingsByNameJSON(
-			@RequestParam(Constants.QUERY_KEY_BEER_ID) String beerId,
+			@RequestParam(Constants.KEY_BEER_ID) String beerId,
 			@RequestParam(Constants.QUERY_KEY_USER_ID) String userId,
 			Model model) 
 	{

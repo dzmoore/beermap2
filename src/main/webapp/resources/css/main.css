@@ -11,6 +11,18 @@ table {
 	border: 1px solid #30282A;
 }
 
+table.invis {
+	border: none;
+}
+
+td.invis {
+	border: none;
+}
+
+th.invis {
+	border: none;
+}
+
 td {
 	background-color: #542733;
 	color: #C4D4CB;
@@ -48,4 +60,63 @@ span.centermenu {
 	position: fixed;
 	top: 50%;
 	right: 50%;
+}
+
+span.centermenu form {
+	padding: 5px;
+	font-weight: bold;
+	color: #000000;
+	background-color: #ffffff;
+	display: inline-block;
+	border: 1px solid black;
+	position: fixed;
+	top: 50%;
+	right: 50%;
+}
+
+a:link {color:#E84167;}     /* unvisited link */
+a:visited {color:#C4D4CB;}  /* visited link */
+
+span.entry {
+	padding-top: 0px;
+	padding-left: 5px;
+	padding-bottom: 5px;
+	padding-right: 5px;
+	font-weight: bold;
+	background-color: #542733;
+	color: #C4D4CB;
+	border: 2px solid #30282A;
+	display: inline-block;
+	border: 1px solid black;
+}
+
+span.item {
+	font-weight: normal;
+	margin-left: 15px;
+	background-color: #542733;
+	color: #C4D4CB;
+	border: 2px solid #30282A;
+	display: inline-block;
+	border: 1px solid black;
+}
+
+h2.item {
+	padding: 5px;
+	font-weight: bold;
+	background-color: #30282A;
+	color: #C4D4CB;
+	border: 2px solid #30282A;
+	display: inline-block;
+	border: 1px solid black;
+}
+
+b.item {
+	margin:5px;
+	padding: 5px;
+	font-weight: bold;
+	background-color: #30282A;
+	color: #C4D4CB;
+	border: 2px solid #30282A;
+	display: inline-block;
+	border: 1px solid black;
 }

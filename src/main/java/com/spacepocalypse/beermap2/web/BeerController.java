@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.service.BeerService;
+import com.spacepocalypse.beermap2.service.Constants;
+import com.spacepocalypse.util.Conca;
 
 /**
  * @author dylan
@@ -35,26 +37,29 @@ public class BeerController {
 		return "index";
 	}
 	
+	@RequestMapping(value = "/beer", method=RequestMethod.GET)
+	public String displayBeer(@RequestParam(Constants.KEY_BEER_ID) String id, Model model) {
+		MappedBeer result = beerSvc.findBeerById(id);
+		
+		if (result.getId() == Constants.INVALID_ID) {
+			model.addAttribute(Constants.RESULT, Constants.UNABLE_TO_FIND);
+			
+		} else {
+			model.addAttribute(Constants.RESULT, result.getName());
+		}
+		
+		model.addAttribute(Constants.KEY_MAPPED_BEER, result);
+		return "beer";
+	}
+	
 	@RequestMapping(value = "/welcome", method=RequestMethod.GET)
 	public String welcome(Model model) {
 		model.addAttribute("today", new Date());
 		return "welcome";
 	}
 	
-	@RequestMapping(value = "/search", method=RequestMethod.GET)
-	public void setupSearchForm(Model model) {
+	@RequestMapping(value = "/update", method=RequestMethod.GET)
+	public void setupUpdateForm(Model model) {
 	}
 	
-	@RequestMapping(value = "/search", method=RequestMethod.POST)
-	public String submitBeerSearch(@RequestParam("beerName") String beerName, Model model) {
-		List<MappedBeer> beers = Collections.emptyList();
-		
-		if (beerName != null) {
-			beers = beerSvc.findAllBeers(beerName);
-		}
-		
-		model.addAttribute("beers", beers);
-		
-		return "search";
-	}
 }

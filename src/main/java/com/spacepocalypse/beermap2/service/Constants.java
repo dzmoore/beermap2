@@ -14,13 +14,20 @@ public class Constants {
 	
 	// param keys
 	public static final String KEY_BM4A_JSON_RESULT = "result";
+	public static final String RESULT = "result";
 	public static final String KEY_MAPPED_BEER = "mb";
-	public static final String KEY_MAPPED_BEERS = "mbs";
+	public static final String KEY_MAPPED_BEERS = "beers";
 	public static final String KEY_USERNAME = "un";
 	public static final String KEY_PASSWORD = "pw";
 	public static final String KEY_MAPPED_RATING = "mr";
 	public static final String KEY_USER = "user";
 	public static final String KEY_TIMEOUT_MS = "TOms";
+	public static final String KEY_BEER_ID = "id";
+	public static final String KEY_BREWERY_NAME = "br_name";
+	
+	public static int INVALID_ID = -1;
+	
+	public static String UNABLE_TO_FIND = "Unable to Find Item";
 	
 	// search
 	public static final String QUERY_TYPE_SEARCH = "s";
@@ -32,7 +39,6 @@ public class Constants {
 	public static final String QUERY_KEY_NAME = "_name";
 	public static final String QUERY_KEY_ABV = "_abv";
 	public static final String QUERY_KEY_UPC = "_upc";
-	public static final String QUERY_KEY_BEER_ID = "_beerid";
 	public static final String QUERY_KEY_USER_ID = "_userid";
 	
 	// update

@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.apache.log4j.Logger;
 
+import com.spacepocalypse.beermap2.dao.BeerDbAccess;
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.domain.MappedBeerRating;
 import com.spacepocalypse.beermap2.domain.MappedValue;
@@ -22,8 +23,8 @@ public class BeerService implements IBeerService {
 	}
 	
 	public List<MappedBeer> findAllBeers(String beerName) {
-		Map<String, String[]> params = new HashMap<String, String[]>();
-		params.put(Constants.QUERY_KEY_NAME, new String[]{beerName});
+		Map<String, String> params = new HashMap<String, String>();
+		params.put(Constants.QUERY_KEY_NAME, beerName);
 		List<MappedBeer> results = Collections.emptyList();
 		
 		try {
@@ -34,6 +35,10 @@ public class BeerService implements IBeerService {
 		}
 		
 		return results;
+	}
+	
+	public MappedBeer findBeerById(String id) {
+		return dbAccess.findBeerById(id);
 	}
 	
 	public List<MappedValue> findAllRatingTypes() {
@@ -53,7 +58,7 @@ public class BeerService implements IBeerService {
 		List<MappedBeerRating> ret = Collections.emptyList();
 
 		final Map<String, String> params = new HashMap<String, String>();
-		params.put(Constants.QUERY_KEY_BEER_ID, beerId);
+		params.put(Constants.KEY_BEER_ID, beerId);
 		params.put(Constants.QUERY_KEY_USER_ID, userId);
 		
 		try {

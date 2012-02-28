@@ -1,3 +1,9 @@
+<%@page import="org.apache.taglibs.standard.lang.jstl.test.PageContextImpl"%>
+<%@page import="java.util.Enumeration"%>
+<%@page import="com.spacepocalypse.util.Conca"%>
+<%@page import="com.spacepocalypse.beermap2.web.SearchController"%>
+<%@page import="org.apache.log4j.Logger"%>
+<%@page import="com.spacepocalypse.beermap2.service.Constants"%>
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
 	pageEncoding="ISO-8859-1"%>
 
@@ -17,7 +23,8 @@
 	<span class="searchbox">
 		<form method="post">
 			Beer Name <input type="text" name="beerName" value="${beerName}" />
-			<input type="submit" value="Search" />
+			<input type="submit" value="Search" /><br/>
+
 		</form>
 	</span>
 	<table>
@@ -25,12 +32,14 @@
 			<th>Beer Name</th>
 			<th>Abv</th>
 			<th>Description</th>
+			<th>Brewery</th>
 		</tr>
 		<c:forEach items="${beers}" var="eaBeer">
 			<tr>
-				<td>${eaBeer.name}</td>
+				<td><a href="<c:url value="beer?id=${eaBeer.id}"/>">${eaBeer.name}</a></td>
 				<td>${eaBeer.abv}</td>
 				<td>${eaBeer.descript}</td>
+				<td>${eaBeer.brewery.name}</td>
 			</tr>
 		</c:forEach>
 	</table>

@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.log4j.Logger;
 
+import com.spacepocalypse.beermap2.dao.BeerDbAccess;
 import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.util.Conca;
 

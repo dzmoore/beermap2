@@ -7,6 +7,7 @@ import java.util.List;
 import com.spacepocalypse.beermap2.domain.json.JSONArray;
 import com.spacepocalypse.beermap2.domain.json.JSONException;
 import com.spacepocalypse.beermap2.domain.json.JSONObject;
+import com.spacepocalypse.beermap2.service.Constants;
 
 public class MappedBeer implements Serializable {
 	private static final long serialVersionUID = 2563267495110624938L;
@@ -16,12 +17,15 @@ public class MappedBeer implements Serializable {
 	private float abv;
 	private String descript;
 	private String upc;
+	private MappedBrewery brewery;
 	
 	public MappedBeer() {
+		id = Constants.INVALID_ID;
 		setName("");
-		setAbv(-1);
+		setAbv(Constants.INVALID_ID);
 		setDescript("");
 		setUpc("");
+		setBrewery(new MappedBrewery());
 	}
 	
 	public void setName(String name) {
@@ -128,6 +132,14 @@ public class MappedBeer implements Serializable {
 
 	public int getId() {
 		return id;
+	}
+
+	public MappedBrewery getBrewery() {
+		return brewery;
+	}
+
+	public void setBrewery(MappedBrewery brewery) {
+		this.brewery = brewery;
 	}
 	
 	
