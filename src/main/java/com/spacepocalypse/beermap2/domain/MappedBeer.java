@@ -55,22 +55,6 @@ public class MappedBeer implements Serializable {
 		return upc;
 	}
 
-	@Override
-	public String toString() {
-		StringBuilder sb = new StringBuilder();
-		sb.append("name=[");
-		sb.append(getName());
-		sb.append("] abv=[");
-		sb.append(getAbv());
-		sb.append("] descript=[");
-		sb.append(getDescript());
-		sb.append("] upc=[");
-		sb.append(getUpc());
-		sb.append("]");
-		return sb.toString();
-
-	}
-	
 	public static List<MappedBeer> createListFromJSONArray(String response) throws JSONException, NumberFormatException {
 		JSONArray resultsArr = null;
 		try {
@@ -141,6 +125,23 @@ public class MappedBeer implements Serializable {
 	public void setBrewery(MappedBrewery brewery) {
 		this.brewery = brewery;
 	}
-	
-	
+
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("MappedBeer [id=");
+        builder.append(id);
+        builder.append(", name=");
+        builder.append(name);
+        builder.append(", abv=");
+        builder.append(abv);
+        builder.append(", descript=");
+        builder.append(descript);
+        builder.append(", upc=");
+        builder.append(upc);
+        builder.append(", brewery=");
+        builder.append(brewery);
+        builder.append("]");
+        return builder.toString();
+    }
 }

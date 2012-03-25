@@ -78,20 +78,18 @@ public class MappedBrewery implements Serializable{
 		return serialVersionUID;
 	}
 
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("MappedBrewery [id=");
-		builder.append(id);
-		builder.append(", name=");
-		builder.append(name);
-		builder.append(", country=");
-		builder.append(country);
-		builder.append(", descript=");
-		builder.append(descript);
-		builder.append("]");
-		return builder.toString();
-	}
-	
-	
+    @Override
+    public String toString() {
+        StringBuilder builder = new StringBuilder();
+        builder.append("MappedBrewery [id=");
+        builder.append(id);
+        builder.append(", name=");
+        builder.append(name);
+        builder.append(", country=");
+        builder.append(country);
+        builder.append(", descript=");
+        builder.append(descript);
+        builder.append("]");
+        return builder.toString();
+    }
 }

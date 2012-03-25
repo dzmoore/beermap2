@@ -6,7 +6,7 @@
 	<bean name="dbAccess" class="com.spacepocalypse.beermap2.dao.BeerDbAccess">
 		<constructor-arg name="dbName" value="beerdb"/>
 		<constructor-arg name="username" value="root" />
-		<constructor-arg name="password" value="passwordhere" />
+		<constructor-arg name="password" value="password" />
 	</bean>
 
 </beans>

@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
+import org.springframework.aop.framework.autoproxy.target.QuickTargetSourceCreator;
 
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.domain.MappedBeerRating;
@@ -105,6 +106,32 @@ public class BeerDbAccess extends DbExecutor {
 		log4jLogger = Logger.getLogger(BeerDbAccess.class);
 	}
 	
+    public String findSalt(final String username) {
+        String salt = null;
+        final String query = Conca.t(
+                "select salt ",
+                "from user ",
+                "where lower(username) = ?"
+        );
+        
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+
+        values.add(StringUtils.lowerCase(username));
+        types.add(String.class);
+        
+        try {
+            ResultSet rs = execute(query, values, types);
+            if (rs.next()) {
+                salt = rs.getString("salt");
+            }
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t("error occurred while attempting to find salt for username [", username, "]"), e);
+        }
+        
+        return salt;
+    }
+	
 	public void close() throws SQLException {
 		synchronized (dbConnection) {
 			if (getDbConnection() != null && !getDbConnection().isClosed()) {
@@ -132,6 +159,116 @@ public class BeerDbAccess extends DbExecutor {
 		
 		return executeInsert(INSERT_BEER, params, paramTypes);
 	}
+	
+    public MappedUser findMappedUser(final String username) {
+        final String query = SELECT_ALL_USER;
+        
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+
+        values.add(StringUtils.lowerCase(username));
+        types.add(String.class);
+        
+        MappedUser user = new MappedUser();
+        try {
+            ResultSet rs = execute(query, values, types);
+            if (rs.next()) {
+                user = MappedUser.createMappedUser(rs);
+            }
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t("error occurred while attempting to find user for username [", username, "]"), e);
+        }
+        
+        return user;
+    }
+    
+    public MappedUser createUser(final String username, final String salt, final String password) {
+        final String query = Conca.t(
+            "insert into user ",
+            "(username, active, salt, password) ",
+            "VALUES ",
+            "(?, ?, ?, ?)"
+        );
+        
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+
+        values.add(StringUtils.lowerCase(username));
+        types.add(String.class);
+        
+        values.add(1);
+        types.add(Integer.class);
+        
+        values.add(salt);
+        types.add(String.class);
+        
+        values.add(password);
+        types.add(String.class);
+        
+        MappedUser user = new MappedUser();
+        try {
+            int rows = executeUpdate(query, values, types);
+            if (rows == 1) {
+                user = findMappedUser(username);
+            }
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t("error occurred while attempting to create user for username [", username, "]"), e);
+        }
+        
+        return user;
+    }
+    
+    public boolean saltDoesNotExist(final String salt) {
+        final String query = Conca.t(
+                "select salt ",
+                "from user ",
+                "where salt = ?"
+        );
+        
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+
+        values.add(salt);
+        types.add(String.class);
+        
+        try {
+            ResultSet rs = execute(query, values, types);
+
+            return !rs.next();
+        } catch (Exception e) {
+            log4jLogger.error("error occurred while attempting to find salt", e);
+        }
+        
+        return false;
+    }
+    
+    public boolean updateUserPassword(final int userId, final String newHashPassword) {
+        boolean success = false;
+        final String query = Conca.t(
+            "update user ",
+            "set password = ? ",
+            "where id = ?"
+        );
+        
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+
+        values.add(newHashPassword);
+        types.add(String.class);
+        
+        values.add(userId);
+        types.add(Integer.class);
+        
+        try {
+            int rows = executeUpdate(query, values, types);
+            success = (rows == 1);
+        
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t("error occurred while attempting to change password for userid [", userId, "]"), e);
+        }
+        
+        return success;
+    }
 	
 	public boolean updateById(MappedBeer beer) {
 		if (beer == null) {
@@ -428,43 +565,79 @@ public class BeerDbAccess extends DbExecutor {
 	}
 	
 	public MappedUser userAndPasswordMatch(String username, String hashPass) {
-		if (username == null || username.trim().isEmpty() || hashPass == null || hashPass.trim().isEmpty()) {
-			// return immediately under various conditions
-			return null;
-		}
+        if (username == null || username.trim().isEmpty() || password == null
+                || password.trim().isEmpty()) {
+            // return immediately under various conditions
+            return null;
+        }
 
-		List<Object> values = new ArrayList<Object>();
-		List<Class<?>> types = new  ArrayList<Class<?>>();
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
 
-		values.add(StringUtils.lowerCase(username));
-		types.add(String.class);
+        values.add(StringUtils.lowerCase(username));
+        types.add(String.class);
 
-		values.add(hashPass);
-		types.add(String.class);
+        values.add(hashPass);
+        types.add(String.class);
 
-		ResultSet rs = execute(SELECT_ALL_USER_AND_HASHPASS, values, types);
-		
-		MappedUser user = null;
-		try {
-			
-			if (rs.next()) {
-				user = new MappedUser();
-				user.setId(rs.getInt(1));
-				user.setUsername(rs.getString(2));
-				user.setActive(rs.getInt(3) == 1);
-			}
-		} catch (SQLException e) {
-			log4jLogger.error(
-					Conca.t(
-							"SQLException occurred while attempting to auth user:{",
-							"username=[", username, "] hashPass=[", hashPass, "]"
-					),
-					e
-			);
-			closeAndReconnect();
-			return null;
-		}
-		return user;
+        ResultSet rs = execute(SELECT_ALL_USER_AND_HASHPASS, values, types);
+
+        MappedUser user = null;
+        try {
+
+            if (rs.next()) {
+                user = new MappedUser();
+                user.setId(rs.getInt("id"));
+                user.setUsername(rs.getString("username"));
+                user.setActive(rs.getInt("active") == 1);
+            }
+        } catch (SQLException e) {
+            log4jLogger.error(Conca.t(
+                    "SQLException occurred while attempting to auth user:{",
+                    "username=[", username, "]"), e);
+            closeAndReconnect();
+            return null;
+        }
+        return user;
+	    
+	    
+//		if (username == null || username.trim().isEmpty() || hashPass == null || hashPass.trim().isEmpty()) {
+//			// return immediately under various conditions
+//			return null;
+//		}
+//
+//		List<Object> values = new ArrayList<Object>();
+//		List<Class<?>> types = new  ArrayList<Class<?>>();
+//
+//		values.add(StringUtils.lowerCase(username));
+//		types.add(String.class);
+//
+//		values.add(hashPass);
+//		types.add(String.class);
+//
+//		ResultSet rs = execute(SELECT_ALL_USER_AND_HASHPASS, values, types);
+//		
+//		MappedUser user = null;
+//		try {
+//			
+//			if (rs.next()) {
+//				user = new MappedUser();
+//				user.setId(rs.getInt(1));
+//				user.setUsername(rs.getString(2));
+//				user.setActive(rs.getInt(3) == 1);
+//			}
+//		} catch (SQLException e) {
+//			log4jLogger.error(
+//					Conca.t(
+//							"SQLException occurred while attempting to auth user:{",
+//							"username=[", username, "] hashPass=[", hashPass, "]"
+//					),
+//					e
+//			);
+//			closeAndReconnect();
+//			return null;
+//		}
+//		return user;
 	}
 	
 	public MappedBeer findBeerById(final String id) {
@@ -488,6 +661,8 @@ public class BeerDbAccess extends DbExecutor {
 	}
 	
 	public List<MappedBeer> findAllBeers(Map<String, String> parameters) throws SQLException, InvalidParameterException {
+	    log4jLogger.trace(Conca.t("findAllBeers: parameters={", parameters, "}"));
+	    
 		final List<Object> params = new ArrayList<Object>();
 		final List<Class<?>> paramTypes = new ArrayList<Class<?>>();
 		final StringBuilder query = new StringBuilder(SELECT_BY_NAME);
@@ -638,7 +813,7 @@ public class BeerDbAccess extends DbExecutor {
 				}
 				
 				try {
-					int parameterIndex = i+1;
+					final int parameterIndex = i+1;
 					setParamByType(ps, ea, eaType, parameterIndex);
 					
 				} catch (Exception e) {
@@ -786,6 +961,8 @@ public class BeerDbAccess extends DbExecutor {
 		beer.getBrewery().setCountry(rs.getString("brewery_country"));
 		beer.getBrewery().setDescript(rs.getString("brewery_descript"));
 		beer.getBrewery().setId(rs.getInt("brewery_id"));
+		
+		Logger.getLogger(BeerDbAccess.class).trace(Conca.t("createMappedBeer result[", beer, "] "));
 		return beer;
 	}
 	

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.spacepocalypse.beermap2.dao.BeerDbAccess;
@@ -24,7 +25,7 @@ public class BeerService implements IBeerService {
 	
 	public List<MappedBeer> findAllBeers(String beerName) {
 		Map<String, String> params = new HashMap<String, String>();
-		params.put(Constants.QUERY_KEY_NAME, beerName);
+		params.put(Constants.QUERY_KEY_NAME, Conca.t("%", StringUtils.lowerCase(beerName), "%"));
 		List<MappedBeer> results = Collections.emptyList();
 		
 		try {

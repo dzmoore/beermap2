@@ -47,11 +47,13 @@ public class AndroidController {
 	
 	@RequestMapping(value = {"/android/beersearch/", "/android/beersearch"}/*, method=RequestMethod.POST*/)
 	public String getBeersByNameJSON(@RequestParam(Constants.KEY_QUERY) String query, Model model) {
+	    log4jLogger.trace(Conca.t("beer search request. query=[", query, "]"));
+	    
 		List<MappedBeer> results = beerService.findAllBeers(query);
 		
 		convertToJSONAndAddToModel(model, results);
 		
-		Logger.getLogger(getClass()).info(StrUtl.trunc(Conca.t("Returning beers:[", results.toString(), "]"), 200));
+		log4jLogger.info(StrUtl.trunc(Conca.t("Returning beers:[", results.toString(), "]"), 200));
 		
 		return Constants.BM4A_JSON_RESULT;
 	}
