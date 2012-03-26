@@ -2,7 +2,12 @@ B E E R M A P 2
 
 The vision of BeerMap is to create a piece of software that is capable of accessing and manipulating a database of beers.  Currently, this database is populated by the dataset provided by Open Beer Database (http://openbeerdb.com/). BeerMap consists of the server and database backend, a web front-end, and an android application front-end.  Currently, the android application is located here: https://github.com/youcaughtafish/bm4a.
 
-This application is the second iteration of BeerMap, with this iteration created using Maven (http://maven.apache.org/) and Spring MVC/web (http://www.springsource.org/). This application has been developed using Tomcat 7 (http://tomcat.apache.org/) and a MySQL database (http://www.mysql.com/).   Unless otherwise stated, this project is licensed under the Apache License, Version 2.0:
+This application is the second iteration of BeerMap, with this iteration created using Maven (http://maven.apache.org/) and Spring MVC/web (http://www.springsource.org/). This application has been developed using Tomcat 7 (http://tomcat.apache.org/) and a MySQL database (http://www.mysql.com/).   
+
+A demo version of the web front-end is available at http://spacepocalypse.com:8080/beermap2/
+A demo version of the bm4a Android application is available at http://spacepocalypse.com/bm4a_latest.apk (use the credentials: username: test, password: test)
+
+Unless otherwise stated, this project is licensed under the Apache License, Version 2.0:
 
 
 Copyright 2012 Dylan Moore
