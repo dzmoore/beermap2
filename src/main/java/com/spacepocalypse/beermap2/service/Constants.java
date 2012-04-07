@@ -23,7 +23,11 @@ public class Constants {
 	public static final String KEY_USER = "user";
 	public static final String KEY_TIMEOUT_MS = "TOms";
 	public static final String KEY_BEER_ID = "id";
-	public static final String KEY_BREWERY_NAME = "br_name";
+	public static final String KEY_BEER_IDS = "ids";
+	public static final String KEY_USER_ID = "_uid";
+	public static final String KEY_GET_RESULTS_AS_IDS = "_ids";
+	public static final String VALUE_GET_RESULTS_AS_IDS_FALSE = "0";
+	public static final String VALUE_GET_RESULTS_AS_IDS_TRUE = "1";
 	
 	public static int INVALID_ID = -1;
 	
@@ -36,7 +40,9 @@ public class Constants {
 	public static final String SEARCH_TYPE_RATING = "rating";
 	public static final String SEARCH_TYPE_ALL_RATING_TYPES = "art";
 	
-	public static final String QUERY_KEY_NAME = "_name";
+	public static final String QUERY_KEY_BEER_NAME = "_beername";
+	public static final String QUERY_KEY_BEER_OR_BREWERY = "_beerorbrewery";
+	public static final String QUERY_KEY_BREWERY_NAME = "_breweryname";
 	public static final String QUERY_KEY_ABV = "_abv";
 	public static final String QUERY_KEY_UPC = "_upc";
 	public static final String QUERY_KEY_USER_ID = "_userid";

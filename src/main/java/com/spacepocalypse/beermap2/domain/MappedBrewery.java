@@ -1,12 +1,15 @@
 package com.spacepocalypse.beermap2.domain;
 
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
+import com.spacepocalypse.beermap2.domain.json.JSONArray;
 import com.spacepocalypse.beermap2.domain.json.JSONException;
 import com.spacepocalypse.beermap2.domain.json.JSONObject;
 import com.spacepocalypse.beermap2.service.Constants;
 
-public class MappedBrewery implements Serializable{
+public class MappedBrewery implements Serializable {
 	private static final long serialVersionUID = -2139853777020090397L;
 	
 	private int id;
@@ -48,6 +51,16 @@ public class MappedBrewery implements Serializable{
 		}
 		
 		return ret;
+	}
+	
+	public static List<MappedBrewery> createListFromJSONArray(JSONArray jsonArr) throws JSONException {
+	    final List<MappedBrewery> breweries = new ArrayList<MappedBrewery>();
+	    
+	    for (int i = 0; i < jsonArr.length(); i++) {
+	        breweries.add(createMappedBrewery(jsonArr.getJSONObject(i)));
+	    }
+	    
+	    return breweries;
 	}
 	
 	public int getId() {

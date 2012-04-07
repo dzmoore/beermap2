@@ -82,6 +82,10 @@ public class MappedBeer implements Serializable {
 			if (ea.has("descript")) {
 				eaMappedValue.setDescript(ea.getString("descript"));
 			}
+			
+			if (ea.has("brewery")) {
+			    eaMappedValue.setBrewery(MappedBrewery.createMappedBrewery(ea.getJSONObject("brewery")));
+			}
 
 			searchResults.add(eaMappedValue);
 		}
@@ -105,6 +109,10 @@ public class MappedBeer implements Serializable {
 
 		if (ea.has("descript")) {
 			eaMappedValue.setDescript(ea.getString("descript"));
+		}
+		
+		if (ea.has("brewery")) {
+		    eaMappedValue.setBrewery(MappedBrewery.createMappedBrewery(ea.getJSONObject("brewery")));
 		}
 
 		return eaMappedValue;

@@ -16,6 +16,7 @@ import org.springframework.aop.framework.autoproxy.target.QuickTargetSourceCreat
 
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.domain.MappedBeerRating;
+import com.spacepocalypse.beermap2.domain.MappedBrewery;
 import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.beermap2.domain.MappedValue;
 import com.spacepocalypse.beermap2.service.Constants;
@@ -140,7 +141,7 @@ public class BeerDbAccess extends DbExecutor {
 		}
 	}
 	
-	public boolean insertBeer(MappedBeer beer) {
+	public boolean insertBeer(MappedBeer beer, int userId) {
 		if (beer == null || beer.getName() == null || beer.getName().trim().isEmpty()) {
 			return false;
 		}
@@ -157,7 +158,23 @@ public class BeerDbAccess extends DbExecutor {
 		params.add(beer.getDescript());
 		paramTypes.add(String.class);
 		
-		return executeInsert(INSERT_BEER, params, paramTypes);
+		params.add(userId);
+		paramTypes.add(Integer.class);
+		
+		final StringBuilder queryBuilder = new StringBuilder("insert into beers ");
+		queryBuilder.append("(name, abv, descript, add_user_fk");
+
+		if (beer.getBrewery() != null && beer.getBrewery().getId() != Constants.INVALID_ID) {
+		    queryBuilder.append(", brewery_id) values (?, ?, ?, ?, ?)");
+		    
+		    params.add(beer.getBrewery().getId());
+		    paramTypes.add(Integer.class);
+		
+		} else {
+		    queryBuilder.append(") values (?, ?, ?, ?)");
+		}
+		
+		return executeInsert(queryBuilder.toString(), params, paramTypes);
 	}
 	
     public MappedUser findMappedUser(final String username) {
@@ -486,6 +503,46 @@ public class BeerDbAccess extends DbExecutor {
  		return executeInsert(INSERT_BEER_RATING, params, paramTypes);
 	}
 	
+	public List<MappedBeer> findBeersByIds(int[] ids) {
+	    StringBuilder query = new StringBuilder(SELECT_BY_NAME);
+	    
+	    query.append("b.id in (");
+	    
+	    final List<Object> params = new ArrayList<Object>();
+	    final List<Class<?>> paramTypes = new ArrayList<Class<?>>();
+	    
+	    boolean notFirst = false;
+	    for (final int ea : ids) {
+	        if (notFirst) {
+	            query.append(", ");
+	        }
+	        
+	        query.append("?");
+	        
+	        params.add(ea);
+	        paramTypes.add(Integer.class);
+	        
+	        notFirst = true;
+	    }
+
+	    query.append(")");
+
+	    final ResultSet rs = execute(query.toString(), params, paramTypes);
+
+	    final List<MappedBeer> beers = new ArrayList<MappedBeer>();
+
+	    try {
+	        while (rs.next()) {
+	            beers.add(createMappedBeer(rs));
+	        }
+	        
+	    } catch (Exception e) {
+	        log4jLogger.error("Error occurred while attemping to build beers for find beers by id", e);
+	    }
+	    
+	    return beers;
+	}
+	
 	private boolean executeInsert(String query, List<Object> params, List<Class<?>> paramTypes) {
 		boolean success = false;
 		int retryAttempts = DB_EXECUTE_RETRY_ATTEMPTS;
@@ -543,7 +600,33 @@ public class BeerDbAccess extends DbExecutor {
 		}
 		return success;
 	}
-	
+
+	public List<MappedBrewery> findAllBreweries() {
+	    final String findAllBreweriesQuery = Conca.t(
+	            "select ",
+	            "  br.id as brewery_id, ",
+	            "  br.name as brewery_name, ",
+	            "  br.country as brewery_country, ",
+	            "  br.descript as brewery_descript ",
+	            "from breweries br"
+	    );
+
+	    final List<MappedBrewery> breweries = new ArrayList<MappedBrewery>();
+
+	    try {
+	        final ResultSet rs = execute(findAllBreweriesQuery, Collections.emptyList(), new ArrayList<Class<?>>());
+
+	        while (rs.next()) {
+	            breweries.add(createMappedBrewery(rs));
+	        }
+	        
+        } catch (Exception e) {
+            log4jLogger.error("Error occurred while attempting to find all breweries", e);
+        }
+	    
+	    return breweries;
+	}
+
 	public MappedUser findUserByUsername(String username) {
 		if (username == null || username.trim().isEmpty()) {
 			return null;
@@ -599,45 +682,6 @@ public class BeerDbAccess extends DbExecutor {
             return null;
         }
         return user;
-	    
-	    
-//		if (username == null || username.trim().isEmpty() || hashPass == null || hashPass.trim().isEmpty()) {
-//			// return immediately under various conditions
-//			return null;
-//		}
-//
-//		List<Object> values = new ArrayList<Object>();
-//		List<Class<?>> types = new  ArrayList<Class<?>>();
-//
-//		values.add(StringUtils.lowerCase(username));
-//		types.add(String.class);
-//
-//		values.add(hashPass);
-//		types.add(String.class);
-//
-//		ResultSet rs = execute(SELECT_ALL_USER_AND_HASHPASS, values, types);
-//		
-//		MappedUser user = null;
-//		try {
-//			
-//			if (rs.next()) {
-//				user = new MappedUser();
-//				user.setId(rs.getInt(1));
-//				user.setUsername(rs.getString(2));
-//				user.setActive(rs.getInt(3) == 1);
-//			}
-//		} catch (SQLException e) {
-//			log4jLogger.error(
-//					Conca.t(
-//							"SQLException occurred while attempting to auth user:{",
-//							"username=[", username, "] hashPass=[", hashPass, "]"
-//					),
-//					e
-//			);
-//			closeAndReconnect();
-//			return null;
-//		}
-//		return user;
 	}
 	
 	public MappedBeer findBeerById(final String id) {
@@ -668,21 +712,63 @@ public class BeerDbAccess extends DbExecutor {
 		final StringBuilder query = new StringBuilder(SELECT_BY_NAME);
 		final List<MappedBeer> beers = new ArrayList<MappedBeer>();
 		
-		if (parameters.containsKey(Constants.QUERY_KEY_NAME)) {
+		if (parameters.containsKey(Constants.QUERY_KEY_BEER_NAME)) {
 			query.append("lower(b.name) like ? ");
 			
-			String name = parameters.get(Constants.QUERY_KEY_NAME);
+			String name = parameters.get(Constants.QUERY_KEY_BEER_NAME);
 			
 			if (name == null) {
-				log4jLogger.error(Conca.t("name parameter is null. Parameters: [", parameters.toString(), "]"));
+				log4jLogger.error(Conca.t("beer name parameter is null. Parameters: [", parameters.toString(), "]"));
 				return beers;
 			}
 			
 			params.add(name);
-				
+
 			paramTypes.add(String.class);
 		}
 		
+		if (parameters.containsKey(Constants.QUERY_KEY_BEER_OR_BREWERY)) {
+            if (params.size() > 0) {
+                query.append(" and ");
+            }
+            
+            query.append("(lower(br.name) like ? or lower(b.name) like ?) ");
+
+            String name = parameters.get(Constants.QUERY_KEY_BEER_OR_BREWERY);
+
+            if (name == null) {
+                log4jLogger.error(Conca.t("brewery name parameter is null. Parameters: [", parameters.toString(), "]"));
+                return beers;
+            }
+
+            params.add(name);
+
+            paramTypes.add(String.class);
+            
+            params.add(name);
+
+            paramTypes.add(String.class);
+        }
+
+		if (parameters.containsKey(Constants.QUERY_KEY_BREWERY_NAME)) {
+		    if (params.size() > 0) {
+                query.append(" and ");
+            }
+		    
+		    query.append("lower(br.name) like ? ");
+
+		    String name = parameters.get(Constants.QUERY_KEY_BREWERY_NAME);
+
+		    if (name == null) {
+		        log4jLogger.error(Conca.t("brewery name parameter is null. Parameters: [", parameters.toString(), "]"));
+		        return beers;
+		    }
+
+		    params.add(name);
+
+		    paramTypes.add(String.class);
+		}
+
 		if (parameters.containsKey(Constants.QUERY_KEY_ABV)) {
 			if (params.size() > 0) {
 				query.append(" and ");
@@ -734,18 +820,6 @@ public class BeerDbAccess extends DbExecutor {
 			
 			query.append("b.id = ? ");
 			paramTypes.add(Integer.class);
-		}
-		
-		if (parameters.containsKey(Constants.KEY_BREWERY_NAME)) {
-			if (params.size() > 0) {
-				query.append(" and ");
-			}
-
-			final String breweryName = parameters.get(Constants.KEY_BREWERY_NAME);
-		
-			params.add(breweryName);
-			query.append("br.name like ? ");
-			paramTypes.add(String.class);
 		}
 		
 		if (params.size() <= 0) {
@@ -947,6 +1021,15 @@ public class BeerDbAccess extends DbExecutor {
 
 		return results;
 	}
+	
+	private static MappedBrewery createMappedBrewery(ResultSet rs) throws SQLException {
+	    final MappedBrewery br = new MappedBrewery();
+	    br.setName(rs.getString("brewery_name"));
+	    br.setCountry(rs.getString("brewery_country"));
+	    br.setDescript(rs.getString("brewery_descript"));
+	    br.setId(rs.getInt("brewery_id"));
+	    return br;
+	}
 
 	private static MappedBeer createMappedBeer(ResultSet rs) throws SQLException {
 		MappedBeer beer = new MappedBeer();
@@ -965,5 +1048,84 @@ public class BeerDbAccess extends DbExecutor {
 		Logger.getLogger(BeerDbAccess.class).trace(Conca.t("createMappedBeer result[", beer, "] "));
 		return beer;
 	}
+
+    public List<MappedBrewery> findAllBreweries(String query) {
+        final String findBreweriesQuery = Conca.t(
+                "select ",
+                "  br.id as brewery_id, ",
+                "  br.name as brewery_name, ",
+                "  br.country as brewery_country, ",
+                "  br.descript as brewery_descript ",
+                "from breweries br ",
+                "where lower(br.name) like ?"
+        );
+
+        final List<MappedBrewery> breweries = new ArrayList<MappedBrewery>();
+
+        final List<Object> params = new ArrayList<Object>();
+        params.add(query);
+        
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+        types.add(String.class);
+        
+        try {
+            final ResultSet rs = execute(findBreweriesQuery, params, types);
+
+            while (rs.next()) {
+                breweries.add(createMappedBrewery(rs));
+            }
+            
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t("Error occurred while attempting to find breweries for query [", query, "]"), e);
+        }
+        
+        return breweries;
+    }
+    
+    public List<MappedBeer> findBeersForUserId(final int userId) {
+        final String query = Conca.t(
+            "select ", 
+            "   b.id as beer_id, ",
+            "   b.name as beer_name, ",
+            "   b.abv as beer_abv, ", 
+            "   b.descript as beer_descript, ", 
+            "   u.upca as upc_upca, ", 
+            "   br.id as brewery_id, ", 
+            "   br.name as brewery_name, ", 
+            "   br.country as brewery_country, ", 
+            "   br.descript as brewery_descript ", 
+            "from ", 
+            "   beers b left outer join upc u on (b.id = u.beer_fk) ", 
+            "   left outer join breweries br on (b.brewery_id = br.id) ",
+            "   left outer join beer_rating rating on (b.id = rating.beer_fk) ",
+            "where ",
+            "   rating.user_fk = ? or ",
+            "   b.add_user_fk = ? ",
+            "order by rating.last_mod desc"
+        );
+        
+        final List<Object> params = new ArrayList<Object>();
+        params.add(userId);
+        params.add(userId);
+        
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+        types.add(Integer.class);
+        types.add(Integer.class);
+        
+        final List<MappedBeer> beers = new ArrayList<MappedBeer>();
+        
+        try {
+            final ResultSet rs = execute(query, params, types);
+
+            while (rs.next()) {
+                beers.add(createMappedBeer(rs));
+            }
+            
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t("Error occurred while attempting to find beers for user [", userId, "] for query [", query, "]"), e);
+        }
+        
+        return beers;
+    }
 	
 }

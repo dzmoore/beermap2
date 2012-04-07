@@ -45,7 +45,7 @@ public class SearchController {
 		List<MappedBeer> beers = Collections.emptyList();
 		
 		if (beerName != null) {
-			beers = beerSvc.findAllBeers(Conca.t("%", beerName, "%"));
+			beers = beerSvc.findAllBeers(beerName);
 		}
 		
 		session.setAttribute(Constants.KEY_MAPPED_BEERS, beers);

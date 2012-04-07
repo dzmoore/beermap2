@@ -1,5 +1,6 @@
 package com.spacepocalypse.beermap2.web;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang.StringUtils;
@@ -11,8 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import com.spacepocalypse.beermap2.dao.DbExecutor;
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.domain.MappedBeerRating;
+import com.spacepocalypse.beermap2.domain.MappedBrewery;
 import com.spacepocalypse.beermap2.domain.MappedValue;
 import com.spacepocalypse.beermap2.domain.json.JSONArray;
 import com.spacepocalypse.beermap2.domain.json.JSONException;
@@ -29,7 +32,8 @@ import com.spacepocalypse.util.StrUtl;
 
 @Controller
 public class AndroidController {
-	private IBeerService beerService;
+	private static final int MAX_SEARCH_RESULTS_SIZE = 45;
+    private IBeerService beerService;
 	private LoginService loginService;
 	private Logger log4jLogger;
 	
@@ -45,22 +49,134 @@ public class AndroidController {
 		return "androidwelcome";
 	}
 	
-	@RequestMapping(value = {"/android/beersearch/", "/android/beersearch"}/*, method=RequestMethod.POST*/)
-	public String getBeersByNameJSON(@RequestParam(Constants.KEY_QUERY) String query, Model model) {
-	    log4jLogger.trace(Conca.t("beer search request. query=[", query, "]"));
-	    
-		List<MappedBeer> results = beerService.findAllBeers(query);
-		
-		convertToJSONAndAddToModel(model, results);
-		
-		log4jLogger.info(StrUtl.trunc(Conca.t("Returning beers:[", results.toString(), "]"), 200));
-		
-		return Constants.BM4A_JSON_RESULT;
+	@RequestMapping(value = {"/android/brewerysearch/", "/android/brewerysearch"})
+    public String getBreweriesByName(
+            @RequestParam(Constants.KEY_QUERY) String query, 
+            Model model) 
+	{
+        log4jLogger.trace(Conca.t("brewery search request. query=[", query, "]"));
+        
+        List<MappedBrewery> results = beerService.findAllBreweries(query);
+        
+        convertToJSONAndAddToModel(model, results);
+
+        log4jLogger.info(StrUtl.trunc(Conca.t("Returning breweries:[", results.toString(), "]"), 200));
+
+        return Constants.BM4A_JSON_RESULT;
+    }
+	
+	@RequestMapping(value = {"/android/beersforuserid/", "/android/beersforuserid"})
+	public String getBeersForUserId(
+	        @RequestParam(Constants.KEY_USER_ID) String userId,
+	        Model model)
+	{
+	    int userIdInt = Constants.INVALID_ID;
+	    try {
+	        userIdInt = Integer.parseInt(userId);
+
+	    } catch (Exception e) {
+	        log4jLogger.error(Conca.t("Error occurred while attempting to parse userid for beersforuserid, userid[", userId, "]"), e);
+	    }
+
+	    final List<MappedBeer> beerResults = beerService.findBeersForUserId(userIdInt);
+
+	    final JSONArray arr = new JSONArray();
+
+	    for (final MappedBeer ea : beerResults) {
+	        arr.put(ea.getId());
+	    }
+
+	    model.addAttribute(Constants.KEY_BM4A_JSON_RESULT, arr.toString());
+
+	    return Constants.BM4A_JSON_RESULT; 
 	}
 	
+	@RequestMapping(value = {"/android/beerbyids/", "/android/beerbyids"})
+	public String getBeerByIds(
+	        @RequestParam(Constants.KEY_BEER_IDS) String beerIds,
+	        Model model)
+	{
+	    try {
+	        final JSONArray arr = new JSONArray(beerIds);
+	        final int[] ids = new int[arr.length()];
+
+	        for (int i = 0; i < arr.length(); i++) {
+	            ids[i] = arr.getInt(i);
+	        }
+
+	        convertToJSONAndAddToModel(model, beerService.findBeersByIds(ids));
+
+	    } catch (Exception e) {
+	        log4jLogger.error("Error occurred while attempting to parse int array for beersbyids", e);
+	    }
+
+	    return Constants.BM4A_JSON_RESULT; 
+	}
+	
+	@RequestMapping(value = {"/android/beersearch/", "/android/beersearch"})
+	public String getBeersByNameJSON(
+	        @RequestParam(Constants.KEY_QUERY) String query, 
+	        @RequestParam(Constants.KEY_GET_RESULTS_AS_IDS) String useIds,
+	        Model model) 
+	{
+	    log4jLogger.trace(Conca.t("beer search request. query=[", query, "] useIds[", useIds, "]"));
+
+	    List<MappedBeer> results = beerService.findAllBeers(query);
+
+	    if (useIds.equals(Constants.VALUE_GET_RESULTS_AS_IDS_FALSE)) {
+	        if (results.size() > MAX_SEARCH_RESULTS_SIZE) {
+	            final List<MappedBeer> temp = new ArrayList<MappedBeer>();
+	            
+	            int i = 0;
+	            for (final MappedBeer ea : results) {
+	                if (++i > MAX_SEARCH_RESULTS_SIZE) {
+	                    break;
+	                }
+	                
+	                temp.add(ea);
+	            }
+	            
+	            results = temp;
+	        }
+	     
+	        convertToJSONAndAddToModel(model, results);
+
+	        log4jLogger.trace(StrUtl.trunc(Conca.t("Returning beers:[", results.toString(), "]"), 200));
+
+	    } else {
+	        final JSONArray arr = new JSONArray();
+	        
+	        for (final MappedBeer ea : results) {
+	            arr.put(ea.getId());
+	        }
+	        
+	        
+	        model.addAttribute(Constants.KEY_BM4A_JSON_RESULT, arr.toString());
+	        
+	        log4jLogger.trace(StrUtl.trunc(Conca.t("Returning beer ids:[", arr.toString(), "]"), 200));
+	    }
+
+	    return Constants.BM4A_JSON_RESULT;
+	}
+
+	@RequestMapping(value = {"/android/allbreweries/", "/android/allbreweries"})
+	public String getAllBreweriesJSON(Model model) {
+	    log4jLogger.trace("all breweries request");
+
+	    List<MappedBrewery> results = beerService.findAllBreweries();
+
+	    convertToJSONAndAddToModel(model, results);
+
+	    if (log4jLogger.isTraceEnabled()) {
+	        log4jLogger.trace(StrUtl.trunc(Conca.t("Returning breweries:[", results.toString(), "]"), 200));
+	    }
+
+	    return Constants.BM4A_JSON_RESULT;
+	}
+
 	@RequestMapping(value = {"/android/beerupdate/", "/android/beerupdate"}/*, method=RequestMethod.POST*/)
 	public String updateBeer(@RequestParam(Constants.KEY_MAPPED_BEER) String beerToUpdate, Model model) {
-		final boolean result = beerService.updateBeer(beerToUpdate);
+	    final boolean result = beerService.updateBeer(beerToUpdate);
 		
 		JSONObject jsonResultObj = new JSONObject();
 		try {
@@ -77,9 +193,24 @@ public class AndroidController {
 		return Constants.BM4A_JSON_RESULT;
 	}
 	
-	@RequestMapping(value = {"/android/beerinsert/", "/android/beerinsert"}/*, method=RequestMethod.POST*/)
-	public String insertBeer(@RequestParam(Constants.KEY_MAPPED_BEER) String beerToInsert, Model model) {
-		final boolean result = beerService.insertBeer(beerToInsert);
+	@RequestMapping(value = {"/android/beerinsert/", "/android/beerinsert"})
+	public String insertBeer(
+	        @RequestParam(Constants.KEY_MAPPED_BEER) final String beerToInsert, 
+	        @RequestParam(Constants.KEY_USER_ID) final String userId, 
+	        final Model model) 
+	{
+	    int intUserId = Constants.INVALID_ID;
+	    try {
+	        intUserId = Integer.parseInt(userId);
+	    } catch (Exception e) {
+	        log4jLogger.error(Conca.t(
+	                "Parsing error occurred while attempting parse user id on insert beer[", 
+	                beerToInsert, "] userid[", userId, "]"
+	        ));
+	        
+	    }
+	    
+		final boolean result = beerService.insertBeer(beerToInsert, intUserId);
 		
 		JSONObject jsonResultObj = new JSONObject();
 		try {
