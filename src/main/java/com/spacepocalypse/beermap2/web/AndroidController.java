@@ -33,6 +33,7 @@ import com.spacepocalypse.util.StrUtl;
 @Controller
 public class AndroidController {
 	private static final int MAX_SEARCH_RESULTS_SIZE = 45;
+	private static final int MAX_SEARCH_RESULTS_OF_IDS_SIZE = 250;
     private IBeerService beerService;
 	private LoginService loginService;
 	private Logger log4jLogger;
@@ -146,8 +147,13 @@ public class AndroidController {
 	    } else {
 	        final JSONArray arr = new JSONArray();
 	        
+	        int i = 0;
 	        for (final MappedBeer ea : results) {
 	            arr.put(ea.getId());
+	            
+	            if (++i >= MAX_SEARCH_RESULTS_OF_IDS_SIZE) {
+	                break;
+	            }
 	        }
 	        
 	        

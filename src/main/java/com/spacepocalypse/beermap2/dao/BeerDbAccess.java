@@ -1085,7 +1085,7 @@ public class BeerDbAccess extends DbExecutor {
     public List<MappedBeer> findBeersForUserId(final int userId) {
         final String query = Conca.t(
             "select ", 
-            "   b.id as beer_id, ",
+            "   distinct b.id as beer_id, ",
             "   b.name as beer_name, ",
             "   b.abv as beer_abv, ", 
             "   b.descript as beer_descript, ", 

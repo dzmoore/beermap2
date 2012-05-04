@@ -53,7 +53,7 @@ public class TestBeerDbAccess  {
         TestCase.assertNotNull(beers);
         TestCase.assertNotNull(beers.size() > 0);
         
-        log4jLogger.info(Conca.t("beers returned from query: ", beers.size()));
+        log4jLogger.info(Conca.t("beers returned from query: ", beers.size(), " result: [", beers, "]"));
     }
 	
 	@Ignore

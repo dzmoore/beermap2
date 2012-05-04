@@ -34,10 +34,9 @@ public class TestLoginService {
         loginService = (LoginService) ctx.getBean("loginService");
     }
     
-    @Ignore
     @Test
     public void createTestUser() {
-        MappedUser user = loginService.createUser("test1", "test");
+        MappedUser user = loginService.createUser("dom", "mmmbeer");
         
         TestCase.assertNotNull(user);
         TestCase.assertTrue(user.getId() != Constants.INVALID_ID);
