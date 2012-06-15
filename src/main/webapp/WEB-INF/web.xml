@@ -8,7 +8,7 @@
 
 	<context-param>
 		<param-name>contextConfigLocation</param-name>
-		<param-value>/WEB-INF/beer-service.xml, /WEB-INF/android-service.xml</param-value>
+		<param-value>/WEB-INF/beer-service.xml, /WEB-INF/login-service.xml, /WEB-INF/mobile-web-config.xml</param-value>
 	</context-param>
 
 	<listener>
@@ -26,6 +26,12 @@
 		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
 		<load-on-startup>1</load-on-startup>
 	</servlet>
+	
+	<servlet>
+		<servlet-name>beermap2-mobile</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<load-on-startup>1</load-on-startup>
+	</servlet>
 
 	<servlet-mapping>
 		<servlet-name>beermap2-web</servlet-name>
@@ -35,5 +41,10 @@
 	<servlet-mapping>
 		<servlet-name>beermap2-android</servlet-name>
 		<url-pattern>/android</url-pattern>
+	</servlet-mapping>
+	
+	<servlet-mapping>
+		<servlet-name>beermap2-mobile</servlet-name>
+		<url-pattern>/m</url-pattern>
 	</servlet-mapping>
 </web-app>

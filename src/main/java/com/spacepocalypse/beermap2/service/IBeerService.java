@@ -5,6 +5,7 @@ import java.util.List;
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.domain.MappedBeerRating;
 import com.spacepocalypse.beermap2.domain.MappedBrewery;
+import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.beermap2.domain.MappedValue;
 
 public interface IBeerService {
@@ -16,7 +17,7 @@ public interface IBeerService {
 	
 	public List<MappedValue> findAllRatingTypes();
 
-	public boolean updateBeer(String mappedBeerJSON);
+	public boolean updateBeer(final String mappedBeerJSON, final MappedUser use);
 
 	public List<MappedBeerRating> findAllBeerRatings(String beerId, String userId);
 
@@ -29,4 +30,6 @@ public interface IBeerService {
     List<MappedBrewery> findAllBreweries();
 
     public List<MappedBrewery> findAllBreweries(String query);
+
+    MappedBeer findBeerById(String id);
 }

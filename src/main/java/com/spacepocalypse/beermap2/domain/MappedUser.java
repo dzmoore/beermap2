@@ -3,6 +3,8 @@ package com.spacepocalypse.beermap2.domain;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.spacepocalypse.beermap2.domain.json.JSONException;
 import com.spacepocalypse.beermap2.domain.json.JSONObject;
@@ -12,11 +14,13 @@ public class MappedUser implements Serializable {
 	private int id;
 	private String username;
 	private boolean active;
+	private List<String> roles;
 	
 	public MappedUser() {
 		setUsername("");
 		setActive(false);
 		setId(-1);
+		roles = new ArrayList<String>();
 	}
 
 	public void setUsername(String username) {
@@ -43,13 +47,29 @@ public class MappedUser implements Serializable {
 		return id;
 	}
 	
+	/**
+	 * This method will map a user given a {@link ResultSet}.
+	 * Note that rs.next should be called exactly once prior
+	 * to being handed to this method.
+	 */
 	public static MappedUser createMappedUser(ResultSet rs) throws SQLException {
-		int col = 1;
-		MappedUser user = new MappedUser();
+	    final MappedUser user = new MappedUser();
 
-		user.setId(rs.getInt(col++));
-		user.setUsername(rs.getString(col++));
-		user.setActive(rs.getInt(col++) == 1);
+		user.setId(rs.getInt("id"));
+		user.setUsername(rs.getString("username"));
+		user.setActive(rs.getInt("active") == 1);
+		
+		final List<String> roles = new ArrayList<String>();
+		
+		do {
+    		if (rs.getInt("role_active") == 1) {
+    		    roles.add(rs.getString("role_name"));
+    		}
+
+		} while (rs.next());
+		
+		user.setRoles(roles);
+		
 		return user;
 	}
 
@@ -74,4 +94,12 @@ public class MappedUser implements Serializable {
 		String jsonObject = new JSONObject(new MappedUser()).toString();
 		System.out.println(jsonObject);
 	}
+
+    public List<String> getRoles() {
+        return roles;
+    }
+
+    public void setRoles(List<String> roles) {
+        this.roles = roles;
+    }
 }

@@ -1,6 +1,9 @@
 package com.spacepocalypse.beermap2.dao.test;
 
 import java.security.InvalidParameterException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
@@ -32,6 +35,45 @@ public class TestBeerDbAccess  {
 		dbAccess = new BeerDbAccess("beerdb", "root", "password");
 	}
 	
+	@Test
+	public void copyValues() {
+	    final Connection conn = dbAccess.getDbConnection();
+	    
+	    try {
+            final PreparedStatement stmt = 
+                    conn.prepareStatement(Conca.t("select id from beer_rating"));
+            final ResultSet rs = stmt.executeQuery();
+            
+            while (rs.next()) {
+                final int id = rs.getInt("id");
+                
+                final PreparedStatement ratingValQuery = conn.prepareStatement(
+                        "select v.value " +
+                		"from beer_rating_lv v join beer_rating r on (r.rating_fk = v.id) " +
+                		"where r.id = ?");
+                ratingValQuery.setInt(1, id);
+                final ResultSet valueRS = ratingValQuery.executeQuery();
+                
+                if (valueRS.next()) {
+                    final int value = valueRS.getInt(1);
+                    final PreparedStatement insertStmt = conn.prepareStatement("update beer_rating " +
+                    		"set rating_value = ? " +
+                    		"where id = ?");
+                    insertStmt.setInt(1, value);
+                    insertStmt.setInt(2, id);
+                    
+                    insertStmt.execute();
+                }
+                
+//                conn.prepareStatement("insert into beer_rating (rating_value) values ()
+            }
+	    
+	    } catch (SQLException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+	}
+	
 	@Ignore
 	@Test
 	public void testFindBrewery() throws InvalidParameterException, SQLException {
@@ -46,6 +88,7 @@ public class TestBeerDbAccess  {
 		log4jLogger.info(Conca.t("beers returned: {", beers.toString(), "}"));
 	}
 	
+	@Ignore
 	@Test
     public void testFindAllBeersForUser() {
         final List<MappedBeer> beers = dbAccess.findBeersForUserId(1);

@@ -1,0 +1,48 @@
+table { 
+	border: 0px solid black;
+}
+
+table.center {
+	width:90%;
+	margin-left:5%;
+	margin-right:5%;
+}
+
+td {
+	border:0px solid black;
+}
+
+.alignTop {
+	vertical-align: top;
+}
+
+.alignRight { 
+	text-align: right; 
+	width:1%;
+}
+
+.center {
+	width:100%;
+}
+
+.textCenter {
+	text-align: center; 
+}
+
+.centerHalf {
+	width:50%; 
+	margin-left:25%;
+	margin-right:25%;
+}
+
+.badInput {
+	background-color:#7F1914;
+}
+
+.goodInput {
+	background-color:#2B632C;
+}
+
+.textColorException {
+	color:#D43434;
+}

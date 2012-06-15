@@ -3,7 +3,6 @@ package com.spacepocalypse.beermap2.web;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -12,16 +11,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.spacepocalypse.beermap2.dao.DbExecutor;
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.domain.MappedBeerRating;
 import com.spacepocalypse.beermap2.domain.MappedBrewery;
+import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.beermap2.domain.MappedValue;
 import com.spacepocalypse.beermap2.domain.json.JSONArray;
 import com.spacepocalypse.beermap2.domain.json.JSONException;
 import com.spacepocalypse.beermap2.domain.json.JSONObject;
-import com.spacepocalypse.beermap2.service.BeerSearchEngine;
-import com.spacepocalypse.beermap2.service.BeerService;
 import com.spacepocalypse.beermap2.service.Constants;
 import com.spacepocalypse.beermap2.service.IBeerService;
 import com.spacepocalypse.beermap2.service.LoginService;
@@ -124,7 +121,7 @@ public class AndroidController {
 
 	    List<MappedBeer> results = beerService.findAllBeers(query);
 
-	    if (useIds.equals(Constants.VALUE_GET_RESULTS_AS_IDS_FALSE)) {
+	    if (useIds.equals(Constants.VALUE_FALSE)) {
 	        if (results.size() > MAX_SEARCH_RESULTS_SIZE) {
 	            final List<MappedBeer> temp = new ArrayList<MappedBeer>();
 	            
@@ -182,7 +179,8 @@ public class AndroidController {
 
 	@RequestMapping(value = {"/android/beerupdate/", "/android/beerupdate"}/*, method=RequestMethod.POST*/)
 	public String updateBeer(@RequestParam(Constants.KEY_MAPPED_BEER) String beerToUpdate, Model model) {
-	    final boolean result = beerService.updateBeer(beerToUpdate);
+	    // TODO: added new MappedUser() to satisfy compiler. fix later for backwards compat.
+	    final boolean result = beerService.updateBeer(beerToUpdate, new MappedUser());
 		
 		JSONObject jsonResultObj = new JSONObject();
 		try {
@@ -194,7 +192,7 @@ public class AndroidController {
 		
 		model.addAttribute(Constants.KEY_BM4A_JSON_RESULT, jsonResultObj.toString());
 		
-		Logger.getLogger(getClass()).info(Conca.t("Beer update for beer json [", beerToUpdate, "] success:[", result, "]"));
+		Logger.getLogger(getClass()).debug(Conca.t("Beer update for beer json [", beerToUpdate, "] success:[", result, "]"));
 		
 		return Constants.BM4A_JSON_RESULT;
 	}

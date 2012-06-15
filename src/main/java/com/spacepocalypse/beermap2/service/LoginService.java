@@ -1,7 +1,10 @@
 package com.spacepocalypse.beermap2.service;
 
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
 import com.spacepocalypse.beermap2.dao.BeerDbAccess;
@@ -9,7 +12,7 @@ import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.beermap2.util.security.SimplePasswordTools;
 import com.spacepocalypse.util.Conca;
 
-public class LoginService {
+public class LoginService implements ILoginService {
 private static long DEFAULT_AUTH_TIMEOUT_MS = 1000L * 60L * 60L * 24L * 30L;  // 30 days 
 	
 	private AtomicLong authTimeoutMs;
@@ -25,8 +28,9 @@ private static long DEFAULT_AUTH_TIMEOUT_MS = 1000L * 60L * 60L * 24L * 30L;  //
 		this.dbAccess = dbAccess;
 	}
 	
+	@Override
 	public AuthData authUser(String username, String password) {
-	    final AuthData errorAuthData = new AuthData(null, AuthState.ERROR, -1);
+	    final AuthData errorAuthData = new AuthData(new MappedUser(), AuthState.ERROR, -1);
         AuthData data = errorAuthData;
         
 	    // first hash calculate the password hash
@@ -44,6 +48,7 @@ private static long DEFAULT_AUTH_TIMEOUT_MS = 1000L * 60L * 60L * 24L * 30L;  //
 		return data;
 	}
 
+	@Override
 	public boolean changePassword(final String username, String currentPassword, String newPassword) {
 	    boolean success = false;
 	    final MappedUser user = getDbAccess().findMappedUser(username);
@@ -73,23 +78,47 @@ private static long DEFAULT_AUTH_TIMEOUT_MS = 1000L * 60L * 60L * 24L * 30L;  //
 	    return success;
 	}
 	
+	@Override
 	public MappedUser createUser(String username, String password) {
 	    MappedUser user = new MappedUser();
-	    if (getDbAccess().findMappedUser(username).getId() == -1) {
-	        final String salt = getUniqueSalt();
-	        String hashPass = null;
-	        try {
-	            hashPass = SimplePasswordTools.hashPassAndSalt(password, salt);
-	            user = getDbAccess().createUser(username, salt, hashPass);
+	    
+	    if (doesUserExist(username)) {
+	        log4jLogger.info(Conca.t("user [", username, "] already exists!"));
 
-	        } catch (Exception e) {
-	            log4jLogger.error(Conca.t("error creating user [", username, "]"), e);
+	    } else if (StringUtils.length(password) < Constants.MIN_PW_LEN 
+	            || StringUtils.length(username) < Constants.MIN_UN_LEN) 
+	    {
+	        log4jLogger.info(Conca.t(
+	            "user [", username, "] is too short or password is too short [", 
+	            StringUtils.length(password), "]"
+	        ));
+	        
+	    } else {
+	        final Pattern usernamePattern = Pattern.compile(Conca.t("[a-zA-Z0-9]{",Constants.MIN_UN_LEN,",}"));
+	        final Matcher matcher = usernamePattern.matcher(username);
+	        
+	        if (matcher.matches()) {
+    	        final String salt = getUniqueSalt();
+    	        String hashPass = null;
+    	        try {
+    	            hashPass = SimplePasswordTools.hashPassAndSalt(password, salt);
+    	            user = getDbAccess().createUser(username, salt, hashPass);
+    
+    	        } catch (Exception e) {
+    	            log4jLogger.error(Conca.t("error creating user [", username, "]"), e);
+    	        }
+    	        
+	        } else {
+	            log4jLogger.info(Conca.t(
+                    "user [", username, "] has invalid characters"
+                ));
 	        }
 	    }
 
 	    return user;
 	}
 
+	@Override
 	public String getUniqueSalt() {
 	    String salt = SimplePasswordTools.getSalt();
 
@@ -99,6 +128,11 @@ private static long DEFAULT_AUTH_TIMEOUT_MS = 1000L * 60L * 60L * 24L * 30L;  //
 	    }
 
 	    return salt;
+	}
+	
+	@Override
+	public boolean doesUserExist(final String username) {
+	    return getDbAccess().doesUserExist(username);
 	}
 
 	private String findSaltedPasswordHash(String username, String password) {
@@ -170,4 +204,19 @@ private static long DEFAULT_AUTH_TIMEOUT_MS = 1000L * 60L * 60L * 24L * 30L;  //
 		SUCCESS,
 		ERROR
 	}
+
+    @Override
+    public boolean addUserRole(int userId, String roleName) {
+        return getDbAccess().addUserRole(userId, roleName);
+    }
+    
+    @Override
+    public boolean removeUserRole(int userId, String roleName) {
+        return getDbAccess().removeUserRole(userId, roleName);
+    }
+    
+    @Override
+    public MappedUser findUserByName(final String username) {
+        return dbAccess.findUserByUsername(username);
+    }
 }

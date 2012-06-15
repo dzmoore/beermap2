@@ -58,8 +58,17 @@ public class BeerDbAccess extends DbExecutor {
 		"where ";
 	
 	private static final String SELECT_ALL_USER = 
-		"select id, username, active from user " +
-		"where lower(username) = ?";
+		"select " +
+		"     u.id         as id, " +
+		"     u.username   as username, " +
+		"     u.active     as active, " +
+		"     lur.name     as role_name, " +
+		"     ur.active    as role_active " +
+		"from " + 
+		"     user u left outer join user_roles ur on (u.id = ur.userFk) " +
+		"     join lv_user_roles lur on (ur.lv_user_roleFk = lur.id) " +
+		"where " +
+		"     lower(u.username) = lower(?)";
 	
 	private static final String SELECT_ALL_USER_AND_HASHPASS = 
 		SELECT_ALL_USER +
@@ -199,6 +208,74 @@ public class BeerDbAccess extends DbExecutor {
         return user;
     }
     
+    public boolean addUserRole(final int userId, final String role) {
+        final String query = Conca.t(
+            "insert into user_roles \n",
+            "   (userFk, lv_user_roleFk) values \n",
+            "   (?, (select id from lv_user_roles where name = ?));"
+        );
+        
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+
+        values.add(userId);
+        types.add(Integer.class);
+        
+        values.add(role);
+        types.add(String.class);
+        
+        boolean success = false;
+        
+        try {
+            success = executeInsert(query, values, types);
+            
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t(
+                "Error occurred while attempting to add user role [", 
+                role, "] to userId [", userId, "]"), 
+                e
+            );
+        }
+        
+        return success;
+    }
+    
+    public boolean removeUserRole(final int userId, final String roleName) {
+        boolean success = false;
+
+        final String query = Conca.t(
+            "update \n",
+            "   user_roles ur join lv_user_roles lur \n",
+            "   on (ur.lv_user_roleFk = lur.id) \n",
+            "set active = 0 \n",
+            "where \n",
+            "   ur.userFk = ? and \n",
+            "   lower(lur.name) = lower(?)"
+        );
+        
+        final List<Object> values = new ArrayList<Object>();
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+
+        values.add(userId);
+        types.add(Integer.class);
+        
+        values.add(roleName);
+        types.add(String.class);
+        
+        try {
+            success = executeUpdate(query, values, types) == 1;
+            
+        } catch (Exception e) {
+            log4jLogger.error(Conca.t(
+                "Error occurred while attempting to remove user role [", 
+                roleName, "] from userId [", userId, "]"), 
+                e
+            );
+        }
+        
+        return success;
+    }
+    
     public MappedUser createUser(final String username, final String salt, final String password) {
         final String query = Conca.t(
             "insert into user ",
@@ -225,9 +302,31 @@ public class BeerDbAccess extends DbExecutor {
         MappedUser user = new MappedUser();
         try {
             int rows = executeUpdate(query, values, types);
+            
             if (rows == 1) {
+                final String roleQuery = Conca.t(
+                    "insert into user_roles ",
+                    "   (userFk, lv_user_roleFk) ",
+                    "values (",
+                    "   (select id from user where username = ?), ",
+                    "   (select id from lv_user_roles where name = ?)",
+                    ")"
+                );
+                
+                values.clear();
+                types.clear();
+                
+                values.add(username);
+                values.add(Constants.DEFAULT_USER_ROLE);
+                
+                types.add(String.class);
+                types.add(String.class);
+                
+                executeUpdate(roleQuery, values, types);
+
                 user = findMappedUser(username);
             }
+            
         } catch (Exception e) {
             log4jLogger.error(Conca.t("error occurred while attempting to create user for username [", username, "]"), e);
         }
@@ -669,10 +768,7 @@ public class BeerDbAccess extends DbExecutor {
         try {
 
             if (rs.next()) {
-                user = new MappedUser();
-                user.setId(rs.getInt("id"));
-                user.setUsername(rs.getString("username"));
-                user.setActive(rs.getInt("active") == 1);
+                user = MappedUser.createMappedUser(rs);
             }
         } catch (SQLException e) {
             log4jLogger.error(Conca.t(
@@ -840,8 +936,8 @@ public class BeerDbAccess extends DbExecutor {
 		return results;
 	}
 	
-	private ResultSet execute(String query) throws SQLException {
-		return execute(null, null, query);
+	private ResultSet execute(String query) {
+		return execute(query, Collections.emptyList(), new ArrayList<Class<?>>());
 	}
 	
 	private ResultSet execute(String query, List<Object> params, List<Class<?>> paramTypes) {
@@ -919,6 +1015,7 @@ public class BeerDbAccess extends DbExecutor {
 		return results;
 	}
 
+	@Deprecated
 	private ResultSet execute(
 			Map<String, String> parameters,
 			Map<String, Integer> queryKeyOrder,
@@ -1126,6 +1223,33 @@ public class BeerDbAccess extends DbExecutor {
         }
         
         return beers;
+    }
+    
+    public boolean doesUserExist(final String username) {
+        boolean userExists = true;
+        
+        final String query = "select count(*) as user_count from user where lower(username) = ?";
+
+        final List<Object> params = new ArrayList<Object>();
+        params.add(username);
+        
+        final List<Class<?>> types = new ArrayList<Class<?>>();
+        types.add(String.class);
+        
+        
+        final ResultSet rs = execute(query, params, types);
+
+        try {
+            if (rs.next()) {
+                final int count = rs.getInt("user_count");
+                userExists = count != 0;
+            }
+            
+        } catch (Exception e) {
+            log4jLogger.error("Error occurrred while attempting to determine if user exists:["+username+"]", e);
+        }
+        
+        return userExists;
     }
 	
 }

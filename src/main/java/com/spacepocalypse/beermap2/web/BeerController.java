@@ -52,12 +52,6 @@ public class BeerController {
 		return "beer";
 	}
 	
-	@RequestMapping(value = "/welcome", method=RequestMethod.GET)
-	public String welcome(Model model) {
-		model.addAttribute("today", new Date());
-		return "welcome";
-	}
-	
 	@RequestMapping(value = "/update", method=RequestMethod.GET)
 	public void setupUpdateForm(Model model) {
 	}

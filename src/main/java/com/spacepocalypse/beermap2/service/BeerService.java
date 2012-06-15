@@ -14,6 +14,7 @@ import com.spacepocalypse.beermap2.dao.BeerDbAccess;
 import com.spacepocalypse.beermap2.domain.MappedBeer;
 import com.spacepocalypse.beermap2.domain.MappedBeerRating;
 import com.spacepocalypse.beermap2.domain.MappedBrewery;
+import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.beermap2.domain.MappedValue;
 import com.spacepocalypse.util.Conca;
 import com.spacepocalypse.util.StrUtl;
@@ -42,6 +43,7 @@ public class BeerService implements IBeerService {
 		return results;
 	}
 	
+	@Override
 	public MappedBeer findBeerById(String id) {
 		return dbAccess.findBeerById(id);
 	}
@@ -86,7 +88,9 @@ public class BeerService implements IBeerService {
 		return ret;
 	}
 	
-	public boolean updateBeer(final String mappedBeerJSON) {
+	@Override
+	public boolean updateBeer(final String mappedBeerJSON, final MappedUser user) {
+	    // TODO: add support for change log linking back to the user
 		try {
 			final MappedBeer beerToUpdate = MappedBeer.createMappedBeer(mappedBeerJSON);
 			return dbAccess.updateById(beerToUpdate);
