@@ -16,6 +16,8 @@ import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.FileSystemXmlApplicationContext;
 
 import com.spacepocalypse.beermap2.dao.BeerDbAccess;
 import com.spacepocalypse.beermap2.domain.MappedBeer;
@@ -32,10 +34,11 @@ public class TestBeerDbAccess  {
 	public void setup() {
 		log4jLogger = Logger.getLogger(getClass());
 		log4jLogger.setLevel(Level.INFO);
-		dbAccess = new BeerDbAccess("beerdb", "root", "password");
+		
+		ApplicationContext ctx = new FileSystemXmlApplicationContext("src/main/webapp/WEB-INF/dbaccess.xml");
+        dbAccess = (BeerDbAccess)ctx.getBean("dbAccess");
 	}
 	
-	@Test
 	public void copyValues() {
 	    final Connection conn = dbAccess.getDbConnection();
 	    
@@ -108,5 +111,34 @@ public class TestBeerDbAccess  {
 	    TestCase.assertNotNull(breweries.size() > 0);
 	    
 	    log4jLogger.info(Conca.t("breweries returned from query: ", breweries.size()));
+	}
+	
+	@Test
+	public void testInsertBeer() throws SQLException {
+	    final Connection conn1 = dbAccess.getDbConnection();
+	    conn1.setAutoCommit(false);
+	    
+	    final Connection conn2 = dbAccess.getDbConnection();
+	    conn2.setAutoCommit(false);
+	    
+	    conn1.prepareStatement("insert into beers (name) values ('test1')").executeUpdate();
+	    PreparedStatement stmt1 = conn1.prepareStatement("select last_insert_id() as last_id_1");
+        stmt1.execute();
+        ResultSet resultSet1 = stmt1.getResultSet();
+        resultSet1.next();
+        int lastId1 = resultSet1.getInt("last_id_1");
+	    
+        PreparedStatement stmt2 = conn2.prepareStatement("select last_insert_id() as last_id_2");
+        stmt2.execute();
+        ResultSet resultSet2 = stmt2.getResultSet();
+        resultSet2.next();
+        int lastId2 = resultSet2.getInt("last_id_2");
+	    
+        TestCase.assertTrue(lastId1 != lastId2);
+        
+        conn1.rollback();
+        conn2.rollback();
+        conn1.close();
+        conn2.close();
 	}
 }

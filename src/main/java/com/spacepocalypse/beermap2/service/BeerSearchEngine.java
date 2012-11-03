@@ -103,9 +103,6 @@ public class BeerSearchEngine implements IStoppable {
 			out.print("<b>abv</b>: "+beer.getAbv());
 			out.print("<br />");
 			
-			out.print("<b>UPC</b>: " + beer.getUpc());
-			out.print("<br />");
-			
 			out.println("<b>descript</b>: "+beer.getDescript());
 			out.println("<hr />");
 		}

@@ -1,0 +1,2 @@
+changes to tomcat to support utf-8 encoding
+1.  add URIEncoding="UTF-8" to connector in server.xml

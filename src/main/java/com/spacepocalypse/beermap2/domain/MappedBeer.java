@@ -1,13 +1,19 @@
 package com.spacepocalypse.beermap2.domain;
 
 import java.io.Serializable;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.log4j.Logger;
+
+import com.spacepocalypse.beermap2.dao.BeerDbAccess;
 import com.spacepocalypse.beermap2.domain.json.JSONArray;
 import com.spacepocalypse.beermap2.domain.json.JSONException;
 import com.spacepocalypse.beermap2.domain.json.JSONObject;
 import com.spacepocalypse.beermap2.service.Constants;
+import com.spacepocalypse.util.Conca;
 
 public class MappedBeer implements Serializable {
 	private static final long serialVersionUID = 2563267495110624938L;
@@ -16,7 +22,6 @@ public class MappedBeer implements Serializable {
 	private String name;
 	private float abv;
 	private String descript;
-	private String upc;
 	private MappedBrewery brewery;
 	
 	public MappedBeer() {
@@ -24,7 +29,6 @@ public class MappedBeer implements Serializable {
 		setName("");
 		setAbv(Constants.INVALID_ID);
 		setDescript("");
-		setUpc("");
 		setBrewery(new MappedBrewery());
 	}
 	
@@ -47,14 +51,6 @@ public class MappedBeer implements Serializable {
 		return descript;
 	}
 	
-	public void setUpc(String upc) {
-		this.upc = upc;
-	}
-
-	public String getUpc() {
-		return upc;
-	}
-
 	public static List<MappedBeer> createListFromJSONArray(String response) throws JSONException, NumberFormatException {
 		JSONArray resultsArr = null;
 		try {
@@ -93,7 +89,7 @@ public class MappedBeer implements Serializable {
 	}
 
 	public static MappedBeer createMappedBeer(String json) throws JSONException, NumberFormatException {
-		JSONObject ea = new JSONObject(json);
+		final JSONObject ea = new JSONObject(json);
 		MappedBeer eaMappedValue = new MappedBeer();
 		if (ea.has("id")) {
 			eaMappedValue.setId(ea.getInt("id"));
@@ -145,11 +141,24 @@ public class MappedBeer implements Serializable {
         builder.append(abv);
         builder.append(", descript=");
         builder.append(descript);
-        builder.append(", upc=");
-        builder.append(upc);
         builder.append(", brewery=");
         builder.append(brewery);
         builder.append("]");
         return builder.toString();
+    }
+    
+    public static MappedBeer createMappedBeer(ResultSet rs) throws SQLException {
+        final MappedBeer beer = new MappedBeer();
+        beer.setId(rs.getInt("beer_id"));
+        beer.setName(rs.getString("beer_name"));
+        beer.setAbv(rs.getFloat("beer_abv"));
+        beer.setDescript(rs.getString("beer_descript"));
+        
+        beer.getBrewery().setName(rs.getString("brewery_name"));
+        beer.getBrewery().setCountry(rs.getString("brewery_country"));
+        beer.getBrewery().setDescript(rs.getString("brewery_descript"));
+        beer.getBrewery().setId(rs.getInt("brewery_id"));
+        
+        return beer;
     }
 }

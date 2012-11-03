@@ -14,6 +14,11 @@ public class Constants {
 	// param keys
 	public static final String KEY_BM4A_JSON_RESULT = "result";
 	public static final String RESULT = "result";
+	public static final String SELECTED = "selected";
+	public static final String BEER_ID = "bid";
+	public static final String BEER_NAME = "bnm";
+	public static final String BEER_ABV = "babv";
+	public static final String BEER_DESC = "bdesc";
 	public static final String KEY_MAPPED_BEER = "mb";
 	public static final String KEY_MAPPED_BEERS = "beers";
 	public static final String KEY_USERNAME = "un";
@@ -28,6 +33,11 @@ public class Constants {
 	public static final String VALUE_FALSE = "0";
 	public static final String VALUE_TRUE = "1";
 	public static final String KEY_LOGGED_IN = "li";
+	public static final String GO_TO = "to";
+	public static final String PARAM_NAME = "paramNm";
+	public static final String BREWERY_OBJ_JSON = "brjson";
+	public static final String BREWERY_NAME = "brnm";
+	public static final String BREWERY_ID = "brid";
 	
 	public static int INVALID_ID = -1;
 	

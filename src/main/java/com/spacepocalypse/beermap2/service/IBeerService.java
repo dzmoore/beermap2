@@ -17,7 +17,7 @@ public interface IBeerService {
 	
 	public List<MappedValue> findAllRatingTypes();
 
-	public boolean updateBeer(final String mappedBeerJSON, final MappedUser use);
+	public boolean updateBeer(final MappedBeer beer, final MappedUser user);
 
 	public List<MappedBeerRating> findAllBeerRatings(String beerId, String userId);
 
@@ -31,5 +31,9 @@ public interface IBeerService {
 
     public List<MappedBrewery> findAllBreweries(String query);
 
-    MappedBeer findBeerById(String id);
+    MappedBeer findBeerById(int id);
+
+    int insertBeer(MappedBeer beer, int userId);
+
+    MappedBrewery findBreweryById(int id);
 }

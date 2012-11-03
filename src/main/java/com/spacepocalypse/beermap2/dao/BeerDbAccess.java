@@ -1,9 +1,12 @@
 package com.spacepocalypse.beermap2.dao;
 
 import java.security.InvalidParameterException;
+import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -29,7 +32,7 @@ public class BeerDbAccess extends DbExecutor {
 	private static final String ID_KEY = "_id";
 
 	private static final String SELECT_
-		= "select beers.id, name, abv, descript, upc.upca ";
+		= "select beers.id, name, abv, descript ";
 
 	private static final String SELECT_BY_NAME = 
 		"select " +
@@ -37,21 +40,14 @@ public class BeerDbAccess extends DbExecutor {
 		"	b.name as beer_name, " +
 		"	b.abv as beer_abv, " +
 		"	b.descript as beer_descript, " +
-		"	u.upca as upc_upca, " +
 		"	br.id as brewery_id, " +
 		"	br.name as brewery_name, " +
 		"	br.country as brewery_country, " +
 		"	br.descript as brewery_descript " +
 		"from " +
-		"	beers b left outer join upc u on (b.id = u.beer_fk) " +
-		" 	left outer join breweries br on (b.brewery_id = br.id) " +
+		"	beers b left outer join breweries br on (b.brewery_id = br.id) " +
 		"where ";
 	
-	private static final String SELECT_BY_UPC =
-		SELECT_ +
-		"from beers join upc on (beers.id = upc.beer_fk) " +
-		"where upc.upca = ?";
-
 	private static final String SELECT_ALL_WHERE = 
 		SELECT_ +
 		"from beers left outer join upc on (beers.id = upc.beer_fk) " +
@@ -135,6 +131,9 @@ public class BeerDbAccess extends DbExecutor {
             if (rs.next()) {
                 salt = rs.getString("salt");
             }
+         
+            close(rs);
+            
         } catch (Exception e) {
             log4jLogger.error(Conca.t("error occurred while attempting to find salt for username [", username, "]"), e);
         }
@@ -142,21 +141,24 @@ public class BeerDbAccess extends DbExecutor {
         return salt;
     }
 	
-	public void close() throws SQLException {
-		synchronized (dbConnection) {
-			if (getDbConnection() != null && !getDbConnection().isClosed()) {
-				getDbConnection().close();
-			}
+	public int insertBeer(MappedBeer beer, int userId) {
+		if (beer == null || StringUtils.isBlank(beer.getName())) {
+			return Constants.INVALID_ID;
 		}
-	}
-	
-	public boolean insertBeer(MappedBeer beer, int userId) {
-		if (beer == null || beer.getName() == null || beer.getName().trim().isEmpty()) {
-			return false;
-		}
+
+		int newId = Constants.INVALID_ID;
 		
-		List<Object> params = new ArrayList<Object>();
-		List<Class<?>> paramTypes = new ArrayList<Class<?>>();
+		final Connection dbConnection = getDbConnection();
+		
+		final String insertQuery = Conca.t(
+		    "insert into beers \n",
+		    "     (name, abv, descript, brewery_id, add_user_fk) \n",
+		    "values \n",
+		    "     (?, ?, ?, ?, ?)"
+		 );
+		
+		final List<Object> params = new ArrayList<Object>();
+		final List<Class<?>> paramTypes = new ArrayList<Class<?>>();
 		
 		params.add(beer.getName());
 		paramTypes.add(String.class);
@@ -167,23 +169,40 @@ public class BeerDbAccess extends DbExecutor {
 		params.add(beer.getDescript());
 		paramTypes.add(String.class);
 		
+		params.add(beer.getBrewery() == null ? Constants.INVALID_ID : beer.getBrewery().getId());
+		paramTypes.add(Integer.class);
+		
 		params.add(userId);
 		paramTypes.add(Integer.class);
 		
-		final StringBuilder queryBuilder = new StringBuilder("insert into beers ");
-		queryBuilder.append("(name, abv, descript, add_user_fk");
-
-		if (beer.getBrewery() != null && beer.getBrewery().getId() != Constants.INVALID_ID) {
-		    queryBuilder.append(", brewery_id) values (?, ?, ?, ?, ?)");
+		final Connection dbConn = getDbConnection();
+		
+		final PreparedStatement ps = prepareInsert(dbConn, insertQuery, params, paramTypes);
+		
+		try {
+		    if (ps.executeUpdate() > 0) {
+		        final String idQuery = "select last_insert_id() as last_id";
+		        final PreparedStatement idPs = dbConn.prepareStatement(idQuery);
+		        idPs.execute();
+		        final ResultSet rs = idPs.getResultSet();
+		        
+		        if (rs.next()) {
+		            newId = rs.getInt("last_id");
+		            close(rs);
+		        }
+		    }
 		    
-		    params.add(beer.getBrewery().getId());
-		    paramTypes.add(Integer.class);
+        } catch (SQLException e) {
+            log4jLogger.error(Conca.t("Error occurred while attempting to insert beer [", beer, "]"), e);
+        } finally {
+            if (ps != null) {
+                try {
+                    ps.close();
+                } catch (SQLException e) {}
+            }
+        }
 		
-		} else {
-		    queryBuilder.append(") values (?, ?, ?, ?)");
-		}
-		
-		return executeInsert(queryBuilder.toString(), params, paramTypes);
+		return newId;
 	}
 	
     public MappedUser findMappedUser(final String username) {
@@ -235,6 +254,7 @@ public class BeerDbAccess extends DbExecutor {
                 role, "] to userId [", userId, "]"), 
                 e
             );
+            
         }
         
         return success;
@@ -347,15 +367,20 @@ public class BeerDbAccess extends DbExecutor {
         values.add(salt);
         types.add(String.class);
         
+        boolean saltDoesNotExist = false;
+        
         try {
             ResultSet rs = execute(query, values, types);
 
-            return !rs.next();
+            saltDoesNotExist = !rs.next();
+            
+            close(rs);
+            
         } catch (Exception e) {
             log4jLogger.error("error occurred while attempting to find salt", e);
         }
         
-        return false;
+        return saltDoesNotExist;
     }
     
     public boolean updateUserPassword(final int userId, final String newHashPassword) {
@@ -386,23 +411,76 @@ public class BeerDbAccess extends DbExecutor {
         return success;
     }
 	
-	public boolean updateById(MappedBeer beer) {
+	public boolean updateBeer(MappedBeer beer, final int userId) {
 		if (beer == null) {
 			return false;
 		}
+		
+		boolean success = false;
 		try {
-			PreparedStatement ps = getDbConnection().prepareStatement(UPDATE_WHERE_ID);
-			ps.setString(1, beer.getName());
-			ps.setFloat(2, beer.getAbv());
-			ps.setString(3, beer.getDescript());
-			ps.setInt(4, beer.getId());
-			int result = ps.executeUpdate();
-			return result > 0;
-			
-		} catch (SQLException e) {
+		    final List<Object> params = new ArrayList<Object>();
+	        final List<Class<?>> paramTypes = new ArrayList<Class<?>>();
+	        
+	        params.add(beer.getName());
+	        paramTypes.add(String.class);
+	        
+	        params.add(beer.getAbv());
+	        paramTypes.add(Float.class);
+	        
+	        params.add(beer.getDescript());
+	        paramTypes.add(String.class);
+	        
+	        params.add(beer.getId());
+	        paramTypes.add(Integer.class);
+	        
+	        success = executeUpdate(UPDATE_WHERE_ID, params, paramTypes) == 1;
+	        
+	        if (success) {
+	            final String updateLogQuery = Conca.t(
+	                "insert into beer_update_change_log ",
+	                "(user_fk, beer_fk, brewery_id, name, abv, descript, update_or_insert) ",
+	                "values ",
+	                "(?, ?, ?, ?, ?, ?, 'update')"
+	            );
+	            
+	            params.clear();
+	            paramTypes.clear();
+	            
+	            params.add(userId);
+	            paramTypes.add(Integer.class);
+	            
+	            params.add(beer.getId());
+	            paramTypes.add(Integer.class);
+	            
+	            params.add(beer.getBrewery().getId() == Constants.INVALID_ID ? 0 : beer.getBrewery().getId());
+	            paramTypes.add(Integer.class);
+	            
+	            params.add(beer.getName());
+	            paramTypes.add(String.class);
+	            
+	            params.add(beer.getAbv());
+	            paramTypes.add(Float.class);
+	            
+	            params.add(beer.getDescript());
+	            paramTypes.add(String.class);
+	            
+	            if (executeInsert(updateLogQuery, params, paramTypes)) {
+	                log4jLogger.trace("success adding to beer_update_change_log");
+	            
+	            } else {
+	                log4jLogger.warn(Conca.t(
+	                    "error inserting into beer_update_change_log; [",
+	                    beer, "] userId[", userId, "]"
+	                ));
+	            }
+	                
+	        }
+	        
+		} catch (Exception e) {
 			log4jLogger.error(Conca.t("Error occurred while attempting to update beer [", beer, "]"), e);
 		} 
-		return false;
+		
+		return success;
 	}
 	
 	public boolean updateBeerRating(MappedBeerRating rating) {
@@ -440,8 +518,11 @@ public class BeerDbAccess extends DbExecutor {
 			
 			PreparedStatement ps = null;
 			
+			final Connection dbConnection = getDbConnection();
+
 			try {
-				ps = getDbConnection().prepareStatement(query);
+                ps = dbConnection.prepareStatement(query);
+			
 			} catch (Exception e) {
 				log4jLogger.error("Error while trying to prepare statement for query: [: " + query + "]", e);
 				if (e instanceof SQLException) {
@@ -451,7 +532,11 @@ public class BeerDbAccess extends DbExecutor {
 				// SocketException?
 				if (e.getMessage().toLowerCase().contains("broken pipe")) {
 					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
-					closeAndReconnect();
+					if (dbConnection != null) {
+					    try {
+                            dbConnection.close();
+                        } catch (SQLException e1) {}
+					}
 					continue;
 				}
 			}
@@ -478,29 +563,42 @@ public class BeerDbAccess extends DbExecutor {
 
 			try {			
 				rowsUpdated = ps.executeUpdate();
+				ps.close();
 				break;
 			} catch (Exception e) {
 				log4jLogger.error("Error when calling executeUpdate. preparedStatement=[" + (ps == null ? "NULL" : ps.toString()) + "]", e);
 
-				if (e.getMessage().toLowerCase().contains("broken pipe")) {
-					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
-					closeAndReconnect();
-				}
 			}
 		}
 		return rowsUpdated;
 	}
 
-	private void setParamByType(PreparedStatement ps, Object ea,
-			Class<?> eaType, int parameterIndex) throws SQLException {
+	private void setParamByType(
+	    final PreparedStatement ps, 
+	    final Object ea,
+	    final Class<?> eaType, 
+	    final int parameterIndex) throws SQLException 
+	{
 		if (eaType == String.class) {
-			ps.setString(parameterIndex, ea.toString());
+		    if (ea == null) {
+		        ps.setNull(parameterIndex, Types.VARCHAR);
+		    } else {
+		        ps.setString(parameterIndex, ea.toString());
+		    }
 			
 		} else if (eaType == Integer.class) {
-			ps.setInt(parameterIndex, (Integer)ea);
+		    if (ea == null) {
+		        ps.setNull(parameterIndex, Types.INTEGER);
+		    } else {
+		        ps.setInt(parameterIndex, (Integer)ea);
+		    }
 		
 		} else if (eaType == Float.class) {
-			ps.setFloat(parameterIndex, (Float)ea);
+		    if (ea == null) {
+		        ps.setNull(parameterIndex, Types.FLOAT);
+		    } else {
+		        ps.setFloat(parameterIndex, (Float)ea);   
+		    }
 		}
 	}
 	
@@ -642,62 +740,88 @@ public class BeerDbAccess extends DbExecutor {
 	    return beers;
 	}
 	
-	private boolean executeInsert(String query, List<Object> params, List<Class<?>> paramTypes) {
-		boolean success = false;
-		int retryAttempts = DB_EXECUTE_RETRY_ATTEMPTS;
-		while (retryAttempts-- > 0) {
-			if (log4jLogger.isDebugEnabled()) {
-				log4jLogger.debug("executeInsert: Query=[" + query + "]");
-			}
-			
-			PreparedStatement ps = null;
-			
-			try {
-				ps = getDbConnection().prepareStatement(query);
-			} catch (Exception e) {
-				log4jLogger.error("executeInsert(String, List<Object>, List<Class<?>>): " + e.getMessage());
-				if (e instanceof SQLException) {
-					break;
-				}
+	private PreparedStatement prepareInsert(final Connection conn, String query, List<Object> params, List<Class<?>> paramTypes) {
+        int retryAttempts = DB_EXECUTE_RETRY_ATTEMPTS;
+        PreparedStatement ps = null;
 
-				if (e.getMessage().toLowerCase().contains("broken pipe")) {
-					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
-					closeAndReconnect();
-					continue;
-				}
-			}
-			
-			for (int i = 0; i < params.size(); i++) {
-				Object ea = params.get(i);
-				Class<?> eaType = paramTypes.get(i);
+        while (retryAttempts-- > 0) {
+            if (log4jLogger.isDebugEnabled()) {
+                log4jLogger.debug("executeInsert: Query=[" + query + "]");
+            }
+            
+            
+            final Connection dbConnection = conn;
+            try {
+                ps = dbConnection.prepareStatement(query);
 
-				if (ea == null || eaType == null) {
-					log4jLogger.error("executeInsert(String, List<Object>, List<Class<?>>): parameter is null!");
-					return false;
-				}
-				
-				try {
-					int parameterIndex = i+1;
-					setParamByType(ps, ea, eaType, parameterIndex);
-				} catch (SQLException e) {
-					log4jLogger.error("executeInsert(String, List<Object>, List<Class<?>>): " + e.getMessage());
-					return false;
-				}
-			}
+            } catch (Exception e) {
+                log4jLogger.error("executeInsert(String, List<Object>, List<Class<?>>)", e);
+                if (e instanceof SQLException) {
+                    break;
+                }
 
-			try {			
-				success = ps.executeUpdate() > 0;
-				break;
-			} catch (Exception e) {
-				log4jLogger.error("executeInsert(String, List<Object>, List<Class<?>>): " + e.getMessage());
+                if (StringUtils.containsIgnoreCase(e.getMessage(), "broken pipe")) {
+                    log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
+                    if (dbConnection != null) {
+                        try {
+                            dbConnection.close();
+                        } catch (SQLException e1) {}
+                    }
+                    
+                    continue;
+                }
+            }
+            
+            for (int i = 0; i < params.size(); i++) {
+                Object ea = params.get(i);
+                Class<?> eaType = paramTypes.get(i);
 
-				if (e.getMessage().toLowerCase().contains("broken pipe")) {
-					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
-					closeAndReconnect();
-				}
-			}
-		}
-		return success;
+                if (eaType == null) {
+                    log4jLogger.error("executeInsert(String, List<Object>, List<Class<?>>): type is null!");
+                
+                } else {
+                    try {
+                        int parameterIndex = i+1;
+                        setParamByType(ps, ea, eaType, parameterIndex);
+                        
+                    } catch (SQLException e) {
+                        log4jLogger.error("error whilea attempting to set parameter", e);
+                    }
+                }
+            }
+
+        }
+        
+        return ps;
+    }
+	
+	private boolean executeInsert(String query, List<Object> params, List<Class<?>> paramTypes)  {
+	    boolean success = false;
+	    
+	    PreparedStatement ps = null;
+	    final Connection conn = getDbConnection();
+	    try {        
+            ps = prepareInsert(conn, query, params, paramTypes);
+            success = (ps == null ? false : ps.executeUpdate() == 1);
+
+	    } catch (Exception e) {
+            log4jLogger.error("executeInsert error", e);
+
+	    } finally {
+	        try {  
+	            if (ps != null) {
+	                ps.close();
+	            }
+	        } catch (Exception e) {}
+
+	        try {
+	            if (conn != null) {
+	                conn.close();
+	            }
+	        } catch (Exception e) {}
+	    }
+	    
+	    return success;
 	}
 
 	public List<MappedBrewery> findAllBreweries() {
@@ -737,11 +861,15 @@ public class BeerDbAccess extends DbExecutor {
 			ps.execute();
 			
 			ResultSet resultSet = ps.getResultSet();
+
 			if (resultSet.next()) {
 				user = MappedUser.createMappedUser(resultSet);
 			}
+			
+			resultSet.close();
+			
 		} catch (SQLException e) {
-			e.printStackTrace();
+		    log4jLogger.error("Error occurred while attempting to find user by username [" + username + "]", e);
 		} 
 		return user;
 	}
@@ -766,7 +894,6 @@ public class BeerDbAccess extends DbExecutor {
 
         MappedUser user = null;
         try {
-
             if (rs.next()) {
                 user = MappedUser.createMappedUser(rs);
             }
@@ -774,30 +901,87 @@ public class BeerDbAccess extends DbExecutor {
             log4jLogger.error(Conca.t(
                     "SQLException occurred while attempting to auth user:{",
                     "username=[", username, "]"), e);
-            closeAndReconnect();
             return null;
+        
+        } finally {
+            close(rs);
         }
         return user;
 	}
 	
-	public MappedBeer findBeerById(final String id) {
-		Map<String, String> params = new HashMap<String, String>();
-		params.put(Constants.KEY_BEER_ID, id);
-		
-		List<MappedBeer> results = Collections.emptyList();
-		try {
-			results = findAllBeers(params);
-		
-		} catch (Exception e) {
-			log4jLogger.error(Conca.t("An error occurred while attempting to find beer by id. id:[", id, "]"),  e);
-		}
-		
-		if (results.size() != 1) {
-			log4jLogger.warn(Conca.t("Expected result size of one, received:{", results.toString(), "}"));
-			return new MappedBeer();
-		}
-		
-		return results.get(0);
+	public MappedBrewery findBreweryById(final int id) {
+	    final String query = Conca.t(
+	        "select ",
+	        "  br.id as brewery_id, ",
+	        "  br.name as brewery_name, ",
+	        "  br.country as brewery_country, ",
+	        "  br.descript as brewery_descript ",
+	        "from breweries br ",
+	        "where br.id = ?"
+        );
+
+	    MappedBrewery brewery = new MappedBrewery();
+	    final List<Object> params = new ArrayList<Object>();
+	    final List<Class<?>> types = new ArrayList<Class<?>>();
+	    params.add(id);
+	    types.add(Integer.class);
+	    
+	    ResultSet rs = null;
+	    try {
+	        rs = execute(query, params, types);
+
+	        if (rs.next()) {
+	            brewery = MappedBrewery.createMappedBrewery(rs);
+	        }
+
+	    } catch (Exception e) {
+	        log4jLogger.error(Conca.t("Error occurred while attempting to find brewery for id [", id, "]"), e);
+	    
+	    } finally {
+	        close(rs);
+	    }
+
+	    return brewery;
+	}
+	
+	public MappedBeer findBeerById(final int id) {
+	    final String query = Conca.t(
+	        "select ",
+            "   b.id as beer_id, ",
+            "   b.name as beer_name, ",
+            "   b.abv as beer_abv, ",
+            "   b.descript as beer_descript, ",
+            "   br.id as brewery_id, ",
+            "   br.name as brewery_name, ",
+            "   br.country as brewery_country, ",
+            "   br.descript as brewery_descript ",
+            "from ",
+            "   beers b left outer join breweries br on (b.brewery_id = br.id) ",
+            "where b.id = ?"
+        );
+	    
+	    final List<Object> params = new ArrayList<Object>();
+	    params.add(id);
+	    
+	    final List<Class<?>> types = new ArrayList<Class<?>>();
+	    types.add(Integer.class);
+	    
+	    MappedBeer result = new MappedBeer();
+	       
+	    try {
+	        final ResultSet rs = execute(query, params, types);
+
+	        if (rs.next()) {
+	            result = MappedBeer.createMappedBeer(rs);
+	        }
+	        
+	        close(rs);
+	        
+	    } catch (Exception e) {
+	        log4jLogger.error("Error occurred while attempting to find beer by id " + id, e);
+	    }
+	    
+	    return result;
 	}
 	
 	public List<MappedBeer> findAllBeers(Map<String, String> parameters) throws SQLException, InvalidParameterException {
@@ -929,12 +1113,30 @@ public class BeerDbAccess extends DbExecutor {
 			results.add(createMappedBeer(rs));
 		}
 		
+		close(rs);
+		
 		if (log4jLogger.isTraceEnabled()) {
 			log4jLogger.trace(StrUtl.trunc(Conca.t("Results=[", results.toString(), "]"), 500));
 		}
 		
 		return results;
 	}
+
+    private void close(ResultSet rs) {
+        if (rs == null) {
+            return;
+        }
+        try {
+            final Statement statement = rs.getStatement();
+            final Connection connection = statement.getConnection();
+    		
+            rs.close();
+    		statement.close();
+            connection.close();
+        } catch (Exception e) {
+            log4jLogger.warn("error occurred while attempting to close connection.", e);
+        }
+    }
 	
 	private ResultSet execute(String query) {
 		return execute(query, Collections.emptyList(), new ArrayList<Class<?>>());
@@ -951,8 +1153,9 @@ public class BeerDbAccess extends DbExecutor {
 			
 			PreparedStatement ps = null;
 			
+			final Connection dbConnection = getDbConnection();
 			try {
-				ps = getDbConnection().prepareStatement(query);
+                ps = dbConnection.prepareStatement(query);
 				
 			} catch (Exception e) {
 				// attempt to handle "broken pipe" and the like errors
@@ -968,7 +1171,11 @@ public class BeerDbAccess extends DbExecutor {
 
 				if (StringUtils.containsIgnoreCase(e.getMessage(), "broken pipe")) {
 					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
-					closeAndReconnect();
+					if (dbConnection != null) {
+                        try {
+                            dbConnection.close();
+                        } catch (SQLException e1) {}
+                    }
 					continue;
 				}
 			}
@@ -1007,118 +1214,14 @@ public class BeerDbAccess extends DbExecutor {
 				);
 
 				if (StringUtils.containsIgnoreCase(e.getMessage(), "broken pipe")) {
-					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
-					closeAndReconnect();
+					log4jLogger.error("Detected broken pipe error.");
 				}
+				
 			}
 		}
 		return results;
 	}
 
-	@Deprecated
-	private ResultSet execute(
-			Map<String, String> parameters,
-			Map<String, Integer> queryKeyOrder,
-			String query) throws SQLException 
-	{
-		int retryAttempts = DB_EXECUTE_RETRY_ATTEMPTS;
-		PreparedStatement ps = null;
-		while (retryAttempts-- > 0) {
-			log4jLogger.debug("Query=[" + query + "]");
-			ps = getDbConnection().prepareStatement(query);
-			
-			if (parameters != null && queryKeyOrder != null) {
-				for (String key : queryKeyOrder.keySet()) {
-					int index = queryKeyOrder.get(key);
-					ps.setString(index, Conca.t("%", parameters.get(key), "%"));
-				}
-			}
-
-			try {
-				ps.execute(); 
-				break;
-			} catch (Exception e) {
-				log4jLogger.error("execute(Map<String,String[]>, PreparedStatement, Map<String, Integer>, String): " + e.getMessage());
-
-				if (e.getMessage().toLowerCase().contains("broken pipe")) {
-					log4jLogger.error("Detected broken pipe error. Will attempt DB connection reset.");
-					closeAndReconnect();
-				}
-			}
-		}
-		if (ps == null || ps.getResultSet() == null) {
-			return null;
-		}
-		return ps.getResultSet();
-	}
-	
-	
-	public List<MappedBeer> findAllBeersByName(String name)  {
-		PreparedStatement ps = null;
-
-		try {
-			ps = getDbConnection().prepareStatement(SELECT_BY_NAME);
-			ps.setString(1, "%" + name + "%");
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return new ArrayList<MappedBeer>();
-		}
-
-		try {
-			ps.execute();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return new ArrayList<MappedBeer>();
-		}
-
-		List<MappedBeer> results = new ArrayList<MappedBeer>();
-		ResultSet rs = null;
-		try {
-			rs = ps.getResultSet();
-			while (rs.next()) {
-				results.add(createMappedBeer(rs));
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-
-		return results;
-	}
-	
-	public List<MappedBeer> findAllBeersByUpc(String upc) {
-		PreparedStatement ps = null;
-
-		try {
-			ps = getDbConnection().prepareStatement(SELECT_BY_UPC);
-			ps.setString(1, upc);
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return new ArrayList<MappedBeer>();
-		}
-
-		try {
-			ps.execute();
-		} catch (SQLException e) {
-			e.printStackTrace();
-			return new ArrayList<MappedBeer>();
-		}
-
-		List<MappedBeer> results = new ArrayList<MappedBeer>();
-		ResultSet rs = null;
-		try {
-			rs = ps.getResultSet();
-			while (rs.next()) {
-				results.add(createMappedBeer(rs));
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-
-
-		return results;
-	}
-	
 	private static MappedBrewery createMappedBrewery(ResultSet rs) throws SQLException {
 	    final MappedBrewery br = new MappedBrewery();
 	    br.setName(rs.getString("brewery_name"));
@@ -1134,8 +1237,6 @@ public class BeerDbAccess extends DbExecutor {
 		beer.setName(rs.getString("beer_name"));
 		beer.setAbv(rs.getFloat("beer_abv"));
 		beer.setDescript(rs.getString("beer_descript"));
-		
-		beer.setUpc(rs.getString("upc_upca"));
 		
 		beer.getBrewery().setName(rs.getString("brewery_name"));
 		beer.getBrewery().setCountry(rs.getString("brewery_country"));
@@ -1165,8 +1266,9 @@ public class BeerDbAccess extends DbExecutor {
         final List<Class<?>> types = new ArrayList<Class<?>>();
         types.add(String.class);
         
+        ResultSet rs = null;
         try {
-            final ResultSet rs = execute(findBreweriesQuery, params, types);
+            rs = execute(findBreweriesQuery, params, types);
 
             while (rs.next()) {
                 breweries.add(createMappedBrewery(rs));
@@ -1174,6 +1276,9 @@ public class BeerDbAccess extends DbExecutor {
             
         } catch (Exception e) {
             log4jLogger.error(Conca.t("Error occurred while attempting to find breweries for query [", query, "]"), e);
+        
+        } finally {
+            close(rs);
         }
         
         return breweries;
@@ -1186,14 +1291,12 @@ public class BeerDbAccess extends DbExecutor {
             "   b.name as beer_name, ",
             "   b.abv as beer_abv, ", 
             "   b.descript as beer_descript, ", 
-            "   u.upca as upc_upca, ", 
             "   br.id as brewery_id, ", 
             "   br.name as brewery_name, ", 
             "   br.country as brewery_country, ", 
             "   br.descript as brewery_descript ", 
             "from ", 
-            "   beers b left outer join upc u on (b.id = u.beer_fk) ", 
-            "   left outer join breweries br on (b.brewery_id = br.id) ",
+            "   beers b left outer join breweries br on (b.brewery_id = br.id) ",
             "   left outer join beer_rating rating on (b.id = rating.beer_fk) ",
             "where ",
             "   rating.user_fk = ? or ",
@@ -1247,6 +1350,9 @@ public class BeerDbAccess extends DbExecutor {
             
         } catch (Exception e) {
             log4jLogger.error("Error occurrred while attempting to determine if user exists:["+username+"]", e);
+        
+        } finally {
+            close(rs);
         }
         
         return userExists;

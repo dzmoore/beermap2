@@ -44,7 +44,12 @@ public class BeerService implements IBeerService {
 	}
 	
 	@Override
-	public MappedBeer findBeerById(String id) {
+	public MappedBrewery findBreweryById(int id) {
+	    return dbAccess.findBreweryById(id);
+	}
+	
+	@Override
+	public MappedBeer findBeerById(int id) {
 		return dbAccess.findBeerById(id);
 	}
 	
@@ -89,23 +94,28 @@ public class BeerService implements IBeerService {
 	}
 	
 	@Override
-	public boolean updateBeer(final String mappedBeerJSON, final MappedUser user) {
+	public boolean updateBeer(final MappedBeer beer, final MappedUser user) {
 	    // TODO: add support for change log linking back to the user
+	    boolean success = false;
 		try {
-			final MappedBeer beerToUpdate = MappedBeer.createMappedBeer(mappedBeerJSON);
-			return dbAccess.updateById(beerToUpdate);
+			success = dbAccess.updateBeer(beer, user.getId());
 			
 		} catch (Exception e) {
-			log4jLogger.error(Conca.t("Error occurred while attempting to update beer [", mappedBeerJSON, "]"), e);
+			log4jLogger.error(Conca.t("Error occurred while attempting to update beer [", beer, "]"), e);
 		}
 		
-		return false;
+		return success;
+	}
+	
+	@Override
+	public int insertBeer(final MappedBeer beer, final int userId) {
+	    return dbAccess.insertBeer(beer, userId);
 	}
 	
 	public boolean insertBeer(final String mappedBeerJSON, final int userId) {
 		try {
 			final MappedBeer beerToInsert = MappedBeer.createMappedBeer(mappedBeerJSON);
-			return dbAccess.insertBeer(beerToInsert, userId);
+			return dbAccess.insertBeer(beerToInsert, userId) != Constants.INVALID_ID;
 			
 		} catch (Exception e) {
 			log4jLogger.error(Conca.t("Error occurred while attempting to insert beer [", mappedBeerJSON, "]"), e);
@@ -139,8 +149,8 @@ public class BeerService implements IBeerService {
 	}
 
     @Override
-    public List<MappedBrewery> findAllBreweries(String query) {
-        return dbAccess.findAllBreweries(Conca.t("%",query,"%").toLowerCase());
+    public List<MappedBrewery> findAllBreweries(final String query) {
+        return dbAccess.findAllBreweries(query);
     }
 
     @Override

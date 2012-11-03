@@ -9,10 +9,10 @@
 	<link rel="stylesheet" type="text/css" href="<c:url value="/resources/css/mobile.css"/>" />
 	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
 	<script src="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.js"></script>
-	<title>${result}</title>
+	<title>Dashboard</title>
 </head>
 <body>
-	<div data-role="page" id="singleBeerPage">	
+	<div data-role="page" id="dashboardPage">	
 		<script>
 			$.mobile.pushStateEnabled=false;
 			$('#singleBeerPage').live('pageinit', function(page_e) {

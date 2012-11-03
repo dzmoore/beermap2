@@ -53,7 +53,7 @@ create table beers2 (
 	last_mod timestamp default current_timestamp on update current_timestamp,
 	add_user_fk int(21),
 	primary key (id),
-	foreign key (add_user_fk) references user(id)
+	foreign key (add_user_fk) references user(id) on delete set null on update cascade
 
 ) engine=InnoDB;
 
@@ -107,8 +107,8 @@ create table beer_rating2 (
 
 insert into beer_rating2
 	(id, user_fk, beer_fk, comment, last_mod, rating_value)
-	select id, user_fk, beer_fk, comment, last_mod, rating_value
-	from beer_rating where user_fk != -1
+	select id, user_fk, beer_fk, comment, last_mod, 6 - rating_fk
+	from beer_rating where user_fk != -1;
 	
 rename table beer_rating to beer_rating_old;
 rename table beer_rating2 to beer_rating;
@@ -117,3 +117,24 @@ drop table upc;
 drop table beer_rating_lv;
 
 show table status where engine != 'InnoDB' and Name not like '%old'\G
+
+create table beer_update_change_log (
+	id int(21) not null auto_increment,
+	user_fk int(21) not null,
+	beer_fk int(21) not null,
+	update_or_insert varchar(6),
+	brewery_id int(21) not null default 0,
+	name varchar(255) not null,
+	cat_id int(11) not null default 0,
+	style_id int(11) not null default 0,
+	abv float not null default 0,
+	ibu float not null default 0,
+	srm float not null default 0,
+	upc int(40) not null default 0,
+	filepath varchar(255),
+	descript text,
+	last_mod timestamp default current_timestamp on update current_timestamp,
+	primary key (id),
+	foreign key (user_fk) references user (id) on delete cascade,
+	foreign key (beer_fk) references beers (id) on delete cascade
+) engine=InnoDB;

@@ -1,13 +1,13 @@
-<%@ page language="java" contentType="text/html; charset=ISO-8859-1" pageEncoding="ISO-8859-1"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core"%>
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 	<title>Mobile Web - Search</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1"> 
 	<link rel="stylesheet" href="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.css" />
-	<link rel="stylesheet" type="text/css" href="<c:url value="/resources/css/main.css"/>" />
+	<link rel="stylesheet" type="text/css" href="<c:url value="/resources/css/mobile.css"/>" />
 	<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
 	<script src="http://code.jquery.com/mobile/1.1.0/jquery.mobile-1.1.0.min.js"></script>
 </head> 
@@ -54,6 +54,15 @@
 				
 				return false;
 			});
+			
+			$.getScript('<c:url value="/resources/scripts/nav.js"/>', function() {
+				initNav(
+			 		$('#searchHeaderLoginBtn'), 
+			 		$('#searchHeaderLogoutBtn'),
+			 		$('#searchHeaderCrtAcctBtn'), 
+			 		'<c:out value="${li}" />'
+			 	);
+			});
 		});
 		
 		function doSearch() {
@@ -79,12 +88,16 @@
 				}
 			);
 		}
+		
+		
 				
 	</script>
-	
-	<div data-role="header">
+	<div data-role="header" id="searchPageNavHeader">
+		<a id="searchHeaderLoginBtn" href="logindialog?to=main" data-icon="home" class="ui-btn-left" data-rel="dialog">Login</a>
 		<h1>Search</h1>
-	</div><!-- /header -->
+		<a id="searchHeaderCrtAcctBtn" href="createacct" data-icon="plus" class="ui-btn-right" rel="external">Create Account</a>
+		<a id="searchHeaderLogoutBtn" href="#" data-icon="minus" class="ui-btn-right">Logout</a>
+	</div>
 
 	<div data-role="content" class="ui-body ui-body-a">
 		<form id="search-form">

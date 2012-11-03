@@ -1,6 +1,8 @@
 package com.spacepocalypse.beermap2.domain;
 
 import java.io.Serializable;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,6 +25,15 @@ public class MappedBrewery implements Serializable {
 		country = "";
 		descript = "";
 	}
+	
+   public static MappedBrewery createMappedBrewery(ResultSet rs) throws SQLException {
+        final MappedBrewery br = new MappedBrewery();
+        br.setName(rs.getString("brewery_name"));
+        br.setCountry(rs.getString("brewery_country"));
+        br.setDescript(rs.getString("brewery_descript"));
+        br.setId(rs.getInt("brewery_id"));
+        return br;
+    }
 	
 	public static MappedBrewery createMappedBrewery(JSONObject obj) {
 		final MappedBrewery ret = new MappedBrewery();
@@ -62,6 +73,8 @@ public class MappedBrewery implements Serializable {
 	    
 	    return breweries;
 	}
+	
+	
 	
 	public int getId() {
 		return id;

@@ -3,6 +3,7 @@ package com.spacepocalypse.beermap2.web;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -54,7 +55,7 @@ public class AndroidController {
 	{
         log4jLogger.trace(Conca.t("brewery search request. query=[", query, "]"));
         
-        List<MappedBrewery> results = beerService.findAllBreweries(query);
+        List<MappedBrewery> results = beerService.findAllBreweries("%"+StringUtils.lowerCase(query)+"%");
         
         convertToJSONAndAddToModel(model, results);
 
@@ -180,7 +181,16 @@ public class AndroidController {
 	@RequestMapping(value = {"/android/beerupdate/", "/android/beerupdate"}/*, method=RequestMethod.POST*/)
 	public String updateBeer(@RequestParam(Constants.KEY_MAPPED_BEER) String beerToUpdate, Model model) {
 	    // TODO: added new MappedUser() to satisfy compiler. fix later for backwards compat.
-	    final boolean result = beerService.updateBeer(beerToUpdate, new MappedUser());
+	    boolean result = false;
+        try {
+            result = beerService.updateBeer(MappedBeer.createMappedBeer(beerToUpdate), new MappedUser());
+        } catch (NumberFormatException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        } catch (JSONException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+        }
 		
 		JSONObject jsonResultObj = new JSONObject();
 		try {

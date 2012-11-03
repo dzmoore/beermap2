@@ -1,20 +1,29 @@
 package com.spacepocalypse.beermap2.web;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.servlet.http.HttpSession;
 
+import org.apache.commons.lang.StringEscapeUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.spacepocalypse.beermap2.domain.MappedBeer;
+import com.spacepocalypse.beermap2.domain.MappedBrewery;
 import com.spacepocalypse.beermap2.domain.MappedUser;
 import com.spacepocalypse.beermap2.domain.json.JSONArray;
 import com.spacepocalypse.beermap2.domain.json.JSONException;
@@ -57,19 +66,17 @@ public class MobileWebController {
     }
     
     @RequestMapping(value = {"/m/search", "/m/search/"}, method=RequestMethod.GET)
-    public String search(HttpSession session) {
+    public String search(
+        @RequestParam(value=Constants.KEY_QUERY, required=false) final String query,
+        HttpSession session) {
+        
+        if (query != null) {
+            session.setAttribute(Constants.KEY_QUERY, query);
+        }
+        
         return "search";
     }
     
-    @RequestMapping(value = {"/m/search_params", "/m/search_params/"}, method=RequestMethod.GET)
-    public String searchWithParams(
-            @RequestParam(Constants.KEY_QUERY) final String query,
-            final HttpSession session) 
-    {
-        session.setAttribute(Constants.KEY_QUERY, query);
-        return "search";
-    }
-
     @RequestMapping(value = {"/m/beersearch/", "/m/beersearch"})
     public String getBeersByNameJSON(
             @RequestParam(Constants.KEY_QUERY) String query, 
@@ -207,13 +214,25 @@ public class MobileWebController {
     
     @RequestMapping(value = {"/m/beer", "/m/beer/"})
     public String displayBeer(@RequestParam(Constants.KEY_BEER_ID) String id, HttpSession session, Model model) {
-        final MappedBeer result = beerService.findBeerById(id);
-        
-        if (result.getId() == Constants.INVALID_ID) {
-            model.addAttribute(Constants.RESULT, Constants.UNABLE_TO_FIND);
+        int intId = Constants.INVALID_ID;
+        try {
+            intId = Integer.parseInt(id);
             
-        } else {
-            model.addAttribute(Constants.RESULT, result.getName());
+        } catch (Exception e) {
+            log4jLogger.error("Error parsing beer id into int[" + id + "]", e);
+        }
+        
+        MappedBeer result = new MappedBeer();
+        
+        if (intId > Constants.INVALID_ID) {
+            result = beerService.findBeerById(intId);
+            
+            if (result.getId() == Constants.INVALID_ID) {
+                model.addAttribute(Constants.RESULT, Constants.UNABLE_TO_FIND);
+                
+            } else {
+                model.addAttribute(Constants.RESULT, result.getName());
+            }
         }
         
         model.addAttribute(Constants.KEY_MAPPED_BEER, result);
@@ -221,21 +240,62 @@ public class MobileWebController {
         return "beer";
     }
     
+    private boolean isUserLoggedIn(final HttpSession session, final AtomicReference<MappedUser> user) {
+        if (user == null) {
+            return false;
+        }
+        
+        boolean isLoggedIn = false;
+        
+        try {
+            final String username = session.getAttribute(Constants.KEY_USERNAME) == null ? 
+                null : String.valueOf(session.getAttribute(Constants.KEY_USERNAME));
+        
+            final String password = session.getAttribute(Constants.KEY_PASSWORD) == null ?
+                null : String.valueOf(session.getAttribute(Constants.KEY_PASSWORD));
+            
+            final boolean sessionContainsUnAndPw = StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password);
+            
+            if (sessionContainsUnAndPw) {
+                final AuthData authData = loginService.authUser(username, password);
+                isLoggedIn = authData.getState() == AuthState.SUCCESS;
+                user.set(authData.getUser());
+            }
+            
+        } catch (Exception e) {
+            
+            log4jLogger.warn("error occurred while attempting to verify session contains user", e);
+        }
+        
+        return isLoggedIn;
+    }
+    
     @RequestMapping(value = {"/m/beerupdate/", "/m/beerupdate"})
     public String updateBeer(
-            @RequestParam(Constants.KEY_MAPPED_BEER) String beerToUpdate, 
-            @RequestParam(Constants.KEY_USERNAME) String username, 
-            @RequestParam(Constants.KEY_PASSWORD) String password,
+            @RequestParam(Constants.KEY_MAPPED_BEER) final String beerToUpdateJSON, 
+            final HttpSession session,
             Model model) 
     {
         boolean result = false;
-        
-        final AuthData authData = loginService.authUser(username, password);
-        if (authData.getState() == AuthState.SUCCESS) {
-            result = beerService.updateBeer(beerToUpdate, authData.getUser());
+
+        final AtomicReference<MappedUser> user = new AtomicReference<MappedUser>();
+        if (isUserLoggedIn(session, user)) {
+            try {
+                final MappedBeer beer = MappedBeer.createMappedBeer(StringEscapeUtils.unescapeHtml(beerToUpdateJSON));
+                result = beerService.updateBeer(beer, user.get());
+
+            } catch (Exception e) {
+                log4jLogger.error(Conca.t(
+                    "Error occurred creating beer from json string while trying to update [",
+                    beerToUpdateJSON,
+                    "]"),
+                    e
+                );
+            }
+
         }
         
-        JSONObject jsonResultObj = new JSONObject();
+        final JSONObject jsonResultObj = new JSONObject();
         try {
             jsonResultObj.put(Constants.RESULT, result);
         
@@ -245,50 +305,81 @@ public class MobileWebController {
         
         model.addAttribute(Constants.RESULT, jsonResultObj.toString());
         
-        Logger.getLogger(getClass()).debug(Conca.t("Beer update for beer json [", beerToUpdate, "] success:[", result, "]"));
+        if (log4jLogger.isDebugEnabled()) {
+            log4jLogger.debug(Conca.t("Beer update for beer json [", beerToUpdateJSON, "] success:[", result, "]"));
+        }
         
         return Constants.JSON_RESULT;
     }
     
     @RequestMapping(value = {"/m/createbeer/", "/m/createbeer"}, method = RequestMethod.GET)
     public String createBeerPage(
-            final Model model) 
+        @RequestParam(value=Constants.BREWERY_ID, required=false) final String breweryId,
+        final Model model,
+        final HttpSession session) 
     {
+        copyAttrToModelIfNotNull(model, session, Constants.BEER_NAME);
+        copyAttrToModelIfNotNull(model, session, Constants.BEER_ABV);
+        copyAttrToModelIfNotNull(model, session, Constants.BEER_DESC);
+        
+        if (breweryId != null) {
+            model.addAttribute(Constants.BREWERY_ID, breweryId);
+        }
+        
         return "createbeer";
     }
     
-    @RequestMapping(value = {"/m/createbeer/", "/m/createbeer"}, method = RequestMethod.POST)
-    public String insertBeer(
-            @RequestParam(Constants.KEY_MAPPED_BEER) final String beerToInsert, 
-            @RequestParam(Constants.KEY_USER_ID) final String userId, 
-            final Model model) 
+    private void copyAttrToModelIfNotNull(final Model model, final HttpSession session, final String attrName) {
+        final Object sessionObj = session.getAttribute(attrName);
+        if (sessionObj != null) {
+            model.addAttribute(attrName, sessionObj);
+        }
+    }
+    
+    @RequestMapping(
+        value = {"/m/findbrewerybyid/", "/m/findbrewerybyid"}, 
+        method = RequestMethod.POST, 
+        produces="application/json")
+    @ResponseBody
+    public MappedBrewery findBreweryById(@RequestParam("id") final String id) {
+        int intId = Integer.parseInt(id);
+        
+        return beerService.findBreweryById(intId);
+    }
+    
+    @RequestMapping(value = {"/m/insertbeer/", "/m/insertbeer"}, method = RequestMethod.POST, consumes="application/json", produces="application/json")
+    @ResponseBody
+    public MappedBeer insertBeer(
+        @RequestBody final MappedBeer beer, 
+        final Model model,
+        final HttpSession session) 
     {
-        int intUserId = Constants.INVALID_ID;
-        try {
-            intUserId = Integer.parseInt(userId);
-        } catch (Exception e) {
-            log4jLogger.error(Conca.t(
-                    "Parsing error occurred while attempting parse user id on insert beer[", 
-                    beerToInsert, "] userid[", userId, "]"
-            ));
-            
+        boolean insertSuccess = false; 
+        final AtomicReference<MappedUser> user = new AtomicReference<MappedUser>();
+        if (isUserLoggedIn(session, user)) {
+            try {
+                final int newPk = beerService.insertBeer(beer, user.get().getId());
+                insertSuccess = newPk > 0;
+                beer.setId(newPk);
+                
+            } catch (Exception e) {
+                log4jLogger.warn(Conca.t("error creating beer from string [", beer, "]"), e);
+            }
         }
         
-        final boolean result = beerService.insertBeer(beerToInsert, intUserId);
+//        final JSONObject jsonResultObj = new JSONObject();
+//        try {
+//            jsonResultObj.put(Constants.RESULT, insertSuccess);
+//        
+//        } catch (Exception e) {
+//            log4jLogger.error("Error putting beer update result into json object", e);
+//        }
+//        
+//        model.addAttribute(Constants.JSON_RESULT, jsonResultObj.toString());
         
-        JSONObject jsonResultObj = new JSONObject();
-        try {
-            jsonResultObj.put(Constants.RESULT, result);
+        Logger.getLogger(getClass()).info(Conca.t("Beer update for beer json [", beer, "] success:[", insertSuccess, "]"));
         
-        } catch (Exception e) {
-            log4jLogger.error("Error putting beer update result into json object", e);
-        }
-        
-        model.addAttribute(Constants.JSON_RESULT, jsonResultObj.toString());
-        
-        Logger.getLogger(getClass()).info(Conca.t("Beer update for beer json [", beerToInsert, "] success:[", result, "]"));
-        
-        return Constants.JSON_RESULT;
+        return beer;
     }
     
     @RequestMapping(value = {"/m/createacct/", "/m/createacct"}, method = RequestMethod.GET)
@@ -354,6 +445,83 @@ public class MobileWebController {
         
         return Constants.JSON_RESULT;
     }
+    
+    @RequestMapping(value = {"/m/updateip", "/m/updateip/"})
+    public String updateIp(@RequestParam("ip") final String newIp) {
+        log4jLogger.info(
+            Conca.t(
+                "$$$$$$$$$$$$$$$$$$$$$$$$\n",
+                newIp
+       )); 
+        return "main";
+    }
+    
+    @RequestMapping(value = {"/m/selectbrewery/", "/m/selectbrewery"}, method = RequestMethod.GET)
+    public String selectBrewery(
+        @RequestParam(Constants.BEER_NAME) final String currentBeerName,
+        @RequestParam(Constants.BEER_ABV) final String currentAbv,
+        @RequestParam(Constants.BEER_DESC) final String currentDesc,
+        @RequestParam(Constants.GO_TO) final String gotoOnSuccess,
+        @RequestParam(Constants.PARAM_NAME) final String paramName,
+        final Model model, 
+        final HttpSession session) 
+    {
+        session.setAttribute(Constants.BEER_NAME, currentBeerName);
+        session.setAttribute(Constants.BEER_ABV, currentAbv);
+        session.setAttribute(Constants.BEER_DESC, currentDesc);
+        
+        model.addAttribute(Constants.GO_TO, gotoOnSuccess);
+        model.addAttribute(Constants.PARAM_NAME, paramName);
+        
+        return "selectbrewery";
+    }
+    
+    @RequestMapping(value = {"/m/searchbrewery", "/m/searchbrewery/"}, method = RequestMethod.POST)
+    public String searchBrewery(@RequestParam(Constants.KEY_QUERY) final String query, final Model model, final HttpSession session) {
+        final String processedQuery = StringUtils.lowerCase(Conca.t("%", query, "%"));
+        List<MappedBrewery> breweries = beerService.findAllBreweries(processedQuery);
+        
+        if (breweries.size() > getMaxSearchResultsSize()) {
+            final List<MappedBrewery> tempList = new ArrayList<MappedBrewery>();
+            
+            for (int i = 0; i < getMaxSearchResultsSize() && i < breweries.size(); i++) {
+                tempList.add(breweries.get(i));
+            }
+            
+            breweries = tempList;
+        }
+        
+        final JSONArray arr = new JSONArray(breweries);
+        model.addAttribute(Constants.RESULT, arr);
+        
+        return Constants.JSON_RESULT;
+    }
+    
+    @RequestMapping(value = {"/m/setselectedbrewery", "/m/setselectedbrewery/"}, method = RequestMethod.POST)
+    public String setSelectedBrewery(
+        @RequestParam(Constants.SELECTED) final String selected, 
+        final Model model, 
+        final HttpSession session) 
+    {
+        session.setAttribute(Constants.SELECTED, selected);
+        return Constants.JSON_RESULT;
+    }
+    
+    @RequestMapping(value = {"/m/dashboard/", "/m/dashboard"}, method = RequestMethod.GET)
+    public String dashboardGet(final Model model) {
+        return "dashboard";
+    }
+    
+//    @RequestMapping(
+//        value = {"/m/dashboard_poll/", "/m/dashboard_poll"}, 
+//        method = RequestMethod.POST, 
+//        produces="application/json")
+//    @ResponseBody
+//    public MappedBrewery dashboardPollPost() {
+//        int intId = Integer.parseInt(id);
+//        
+//        return beerService.findBreweryById(intId);
+//    }
     
     public int getMaxSearchResultsSize() {
         return maxSearchResultsSize;
