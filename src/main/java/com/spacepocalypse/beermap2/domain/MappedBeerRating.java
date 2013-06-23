@@ -6,19 +6,21 @@ import java.sql.SQLException;
 
 import com.spacepocalypse.beermap2.domain.json.JSONException;
 import com.spacepocalypse.beermap2.domain.json.JSONObject;
+import com.spacepocalypse.beermap2.service.Constants;
 
 public class MappedBeerRating implements Serializable {
 	private static final long serialVersionUID = -2444895024305314779L;
 	private MappedUser user;
 	private MappedBeer beer;
-	private MappedValue rating;
+//	private MappedValue rating;
+	private int ratingValue;
 	private String comment;
 	private int id;
 	
 	public MappedBeerRating() {
 		setUser(new MappedUser());
 		setBeer(new MappedBeer());
-		setRating(new MappedValue());
+		setRatingValue(1);
 		setComment("");
 		setId(-1);
 	}
@@ -48,14 +50,14 @@ public class MappedBeerRating implements Serializable {
 	}
 
 
-	public void setRating(MappedValue rating) {
-		this.rating = rating;
-	}
-
-
-	public MappedValue getRating() {
-		return rating;
-	}
+//	public void setRating(MappedValue rating) {
+//		this.rating = rating;
+//	}
+//
+//
+//	public MappedValue getRating() {
+//		return rating;
+//	}
 
 
 	public void setComment(String comment) {
@@ -75,7 +77,7 @@ public class MappedBeerRating implements Serializable {
 		sb.append("] comment=[");
 		sb.append(getComment());
 		sb.append("] rating=[");
-		sb.append(getRating().toString());
+		sb.append(getRatingValue());
 		sb.append("] user=[");
 		sb.append(user.getUsername());
 		sb.append("] beer=[");
@@ -107,8 +109,8 @@ public class MappedBeerRating implements Serializable {
 			rating.setComment(jsonObj.getString("comment"));
 		}
 		
-		if (jsonObj.has("rating")) {
-			rating.setRating(MappedValue.createMappedValue(jsonObj.getJSONObject("rating")));
+		if (jsonObj.has("ratingValue")) {
+			rating.setRatingValue(jsonObj.getInt("ratingValue"));
 		}
 
 		return rating;
@@ -130,13 +132,21 @@ public class MappedBeerRating implements Serializable {
 		user.setUsername(rs.getString(col++));
 		user.setActive(rs.getInt(col++) == 1);
 
-		MappedValue val = rating.getRating();
-		val.setId(rs.getInt(col++));
+		rating.setId(rs.getInt(col++));
 		rating.setComment(rs.getString(col++));
-		val.setDesc(rs.getString(col++));
-		val.setValue(rs.getInt(col++));
+		rating.setRatingValue(rs.getInt(col++));
 
 		return rating;
+	}
+
+
+	public int getRatingValue() {
+		return ratingValue;
+	}
+
+
+	public void setRatingValue(int ratingValue) {
+		this.ratingValue = ratingValue;
 	}
 
 }

@@ -77,23 +77,12 @@ public class BeerDbAccess extends DbExecutor {
 	
 	private static final String UPDATE_RATING = 
 		"update beer_rating " +
-		"set rating_fk = ?, comment = ? " +
+		"set rating_value = ?, comment = ? " +
 		"where user_fk = ? and beer_fk = ?";
-	
-	private static final String FIND_ALL_RATINGS_FOR_BEER = 
-		"select " +
-		  "b.id, b.name, b.abv, b.descript, " +
-		  "u.id, u.username, u.active, " +
-		  "br.id, br.comment, " +
-		  "brLV.rating, brLV.value " +
-		"from " +
-		  "beer_rating br join user u on (br.user_fk = u.id) " +
-		  "join beers b on (br.beer_fk = b.id) " +
-		  "join beer_rating_LV brLV on (br.rating_fk = brLV.id) where ";
 	
 	private static final String INSERT_BEER_RATING = 
 		"insert into beer_rating " +
-		  "(user_fk, beer_fk, rating_fk, comment) " +
+		  "(user_fk, beer_fk, rating_value, comment) " +
 		"values " +
 		  "(?, ?, ?, ?)";
 	
@@ -487,7 +476,7 @@ public class BeerDbAccess extends DbExecutor {
 		List<Object> params = new ArrayList<Object>();
 		List<Class<?>> paramTypes = new ArrayList<Class<?>>();
 		
-		params.add(rating.getRating().getId());
+		params.add(rating.getRatingValue());
 		paramTypes.add(Integer.class);
 		
 		params.add(rating.getComment());
@@ -620,7 +609,17 @@ public class BeerDbAccess extends DbExecutor {
 	public List<MappedBeerRating> findAllBeerRatings(Map<String, String> parameters) {
 		List<Object> params = new ArrayList<Object>();
 		List<Class<?>> paramTypes = new ArrayList<Class<?>>();
-		StringBuilder query = new StringBuilder(FIND_ALL_RATINGS_FOR_BEER);
+		StringBuilder query = new StringBuilder();
+		query.append("select ");
+		query.append(	  "b.id, b.name, b.abv, b.descript, ");
+		query.append(	  "u.id, u.username, u.active, ");
+		query.append(	  "br.id, br.comment, ");
+		query.append(	  "br.rating_value ");
+		query.append("from ");
+		query.append("beer_rating br join user u on (br.user_fk = u.id) ");
+		query.append("join beers b on (br.beer_fk = b.id) ");
+		query.append("where ");
+		
 		List<MappedBeerRating> ratings = new ArrayList<MappedBeerRating>();
 		
 		if (parameters.containsKey(Constants.KEY_BEER_ID)) {
@@ -691,7 +690,7 @@ public class BeerDbAccess extends DbExecutor {
 		params.add((Integer)rating.getBeer().getId());
 		paramTypes.add(Integer.class);
 		
-		params.add((Integer)rating.getRating().getId());
+		params.add((Integer)rating.getRatingValue());
 		paramTypes.add(Integer.class);
 		
 		params.add(rating.getComment());
